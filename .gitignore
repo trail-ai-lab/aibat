@@ -1,0 +1,40 @@
+# Node.js / Frontend
+**/node_modules/
+**/.next/
+**/.turbo/
+**/dist/
+**/out/
+**/coverage/
+**/pnpm-lock.yaml
+
+# Python / Backend
+**/__pycache__/
+**/*.py[cod]
+**/.venv/
+**/.mypy_cache/
+**/.pytest_cache/
+**/.ruff_cache/
+**/.DS_Store
+**/.env
+**/.env.*
+**/.vscode/
+**/poetry.lock
+**/.python-version
+
+# Firebase service account key
+**/serviceAccountKey.json
+
+# Logs
+**/logs/
+**/*.log
+
+# OS / IDE files
+*.swp
+*~
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Mac system files
+.DS_Store
