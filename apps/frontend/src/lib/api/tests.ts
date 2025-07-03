@@ -1,0 +1,63 @@
+import { getAuth } from "firebase/auth"
+import { API_BASE_URL } from "@/lib/api"
+
+export interface TestResponse {
+  id: string
+  topic: string
+  statement: string
+  ground_truth: "acceptable" | "unacceptable"
+  ai_assessment: "pass" | "fail"
+  agreement: boolean
+  labeler: string
+  description?: string
+  author?: string
+  model_score?: string
+}
+
+export interface TopicTestsResponse {
+  topic: string
+  total_tests: number
+  tests: TestResponse[]
+}
+
+export async function fetchTestsByTopic(topic: string): Promise<TopicTestsResponse> {
+  const user = getAuth().currentUser
+  if (!user) throw new Error("User not authenticated")
+
+  const token = await user.getIdToken()
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/tests/topic/${encodeURIComponent(topic)}`, {
+    headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.detail || `Failed to fetch tests for topic ${topic}`)
+  }
+
+  return await res.json()
+}
+
+export async function fetchAvailableTopics(): Promise<string[]> {
+  const user = getAuth().currentUser
+  if (!user) throw new Error("User not authenticated")
+
+  const token = await user.getIdToken()
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/tests/topics/available`, {
+    headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  })
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch available topics")
+  }
+
+  const data = await res.json()
+  return data.topics || []
+}

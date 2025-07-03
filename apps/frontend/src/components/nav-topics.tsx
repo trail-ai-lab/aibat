@@ -19,7 +19,13 @@ import {
 } from "@/components/ui/sidebar"
 import type { Topic } from "@/hooks/use-topics"
 
-export function NavDocuments({ topics }: { topics: Topic[] }) {
+export function NavDocuments({
+  topics,
+  onTopicSelect
+}: {
+  topics: Topic[]
+  onTopicSelect?: (topic: string) => void
+}) {
   const { isMobile } = useSidebar()
 
   const renderItem = (topic: Topic) => {
@@ -27,10 +33,13 @@ export function NavDocuments({ topics }: { topics: Topic[] }) {
     return (
       <SidebarMenuItem key={topic.name}>
         <SidebarMenuButton asChild>
-          <a href={topic.url}>
+          <button
+            onClick={() => onTopicSelect?.(topic.name)}
+            className="flex items-center gap-2 w-full text-left"
+          >
             <Icon />
             <span>{topic.name}</span>
-          </a>
+          </button>
         </SidebarMenuButton>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
