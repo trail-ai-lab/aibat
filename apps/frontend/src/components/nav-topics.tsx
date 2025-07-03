@@ -17,6 +17,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { Badge } from "@/components/ui/badge"
 import type { Topic } from "@/hooks/use-topics"
 
 export function NavDocuments({
@@ -35,10 +36,17 @@ export function NavDocuments({
         <SidebarMenuButton asChild>
           <button
             onClick={() => onTopicSelect?.(topic.name)}
-            className="flex items-center gap-2 w-full text-left"
+            className="flex items-center gap-2 w-full text-left justify-between"
           >
-            <Icon />
-            <span>{topic.name}</span>
+            <div className="flex items-center gap-2">
+              <Icon />
+              <span>{topic.name}</span>
+            </div>
+            {!topic.isBuiltin && (
+              <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
+                Custom
+              </Badge>
+            )}
           </button>
         </SidebarMenuButton>
         <DropdownMenu>
@@ -60,15 +68,19 @@ export function NavDocuments({
               <IconFolder />
               <span>Open</span>
             </DropdownMenuItem>
-            <DropdownMenuItem>
-              <IconShare3 />
-              <span>Share</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive">
-              <IconTrash />
-              <span>Delete</span>
-            </DropdownMenuItem>
+            {!topic.isBuiltin && (
+              <>
+                <DropdownMenuItem>
+                  <IconShare3 />
+                  <span>Share</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive">
+                  <IconTrash />
+                  <span>Delete</span>
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

@@ -4,21 +4,39 @@ import { useState } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { DataTable } from "@/components/data-table"
 import { SiteHeader } from "@/components/site-header"
+import { AddTopicForm } from "@/components/add-topic-form"
 import {
   SidebarInset,
   SidebarProvider,
 } from "@/components/ui/sidebar"
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer"
 import { useTests } from "@/hooks/use-tests"
+import { useTopics } from "@/hooks/use-topics"
 import { Badge } from "@/components/ui/badge"
 import { IconLoader, IconDatabase } from "@tabler/icons-react"
 
 export default function Page() {
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null)
+  const [isCreateTopicOpen, setIsCreateTopicOpen] = useState(false)
   const { tests, loading, error, currentTopic, totalTests, fetchTests } = useTests()
+  const { refreshTopics } = useTopics()
 
   const handleTopicSelect = (topic: string) => {
     setSelectedTopic(topic)
     fetchTests(topic)
+  }
+
+  const handleCreateTopic = () => {
+    setIsCreateTopicOpen(true)
+  }
+
+  const handleTopicCreated = () => {
+    refreshTopics() // Refresh the topics list
   }
 
   // Transform tests data to match the data table schema
@@ -44,7 +62,11 @@ export default function Page() {
         } as React.CSSProperties
       }
     >
-      <AppSidebar variant="inset" onTopicSelect={handleTopicSelect} />
+      <AppSidebar
+        variant="inset"
+        onTopicSelect={handleTopicSelect}
+        onCreateTopic={handleCreateTopic}
+      />
       <SidebarInset>
         <SiteHeader />
         <div className="flex flex-1 flex-col">
@@ -125,6 +147,19 @@ export default function Page() {
           </div>
         </div>
       </SidebarInset>
+
+      {/* Create Topic Drawer */}
+      <Drawer open={isCreateTopicOpen} onOpenChange={setIsCreateTopicOpen}>
+        <DrawerContent className="max-h-[90vh]">
+          <DrawerHeader>
+            <DrawerTitle>Create New Topic</DrawerTitle>
+          </DrawerHeader>
+          <AddTopicForm
+            onClose={() => setIsCreateTopicOpen(false)}
+            onSuccess={handleTopicCreated}
+          />
+        </DrawerContent>
+      </Drawer>
     </SidebarProvider>
   )
 }

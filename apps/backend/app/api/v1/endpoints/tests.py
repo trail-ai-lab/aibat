@@ -22,14 +22,16 @@ def list_tests(user=Depends(verify_firebase_token)):
 @router.get("/topic/{topic_name}", response_model=TopicTestsResponse)
 def get_tests_by_topic(topic_name: str, user=Depends(verify_firebase_token)):
     """
-    Get all tests for a specific topic from CSV files
+    Get all tests for a specific topic from CSV files or Firestore
     """
     try:
-        return tests_service.get_tests_by_topic(topic_name)
+        return tests_service.get_tests_by_topic(topic_name, user["uid"])
     except FileNotFoundError:
+        available_topics = tests_service.get_available_topics(user["uid"])
+        all_topics = available_topics["builtin"] + available_topics["user_created"]
         raise HTTPException(
             status_code=404,
-            detail=f"No tests found for topic '{topic_name}'. Available topics: {tests_service.get_available_topics()}"
+            detail=f"No tests found for topic '{topic_name}'. Available topics: {all_topics}"
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -38,9 +40,20 @@ def get_tests_by_topic(topic_name: str, user=Depends(verify_firebase_token)):
 @router.get("/topics/available")
 def get_available_topics(user=Depends(verify_firebase_token)):
     """
-    Get list of available topics based on CSV files
+    Get list of available topics from both CSV files and Firestore
     """
-    return {"topics": tests_service.get_available_topics()}
+    return tests_service.get_available_topics(user["uid"])
+
+
+@router.post("/topics/create")
+def create_topic(topic_data: dict, user=Depends(verify_firebase_token)):
+    """
+    Create a new topic with tests in Firestore
+    """
+    try:
+        return tests_service.create_topic(user["uid"], topic_data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/add/")

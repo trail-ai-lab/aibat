@@ -56,9 +56,11 @@ const data = {
 
 export function AppSidebar({
   onTopicSelect,
+  onCreateTopic,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   onTopicSelect?: (topic: string) => void
+  onCreateTopic?: () => void
 }) {
     const { topics, loading } = useTopics()
     console.log("Loaded topics:", topics, "Loading:", loading)
@@ -80,8 +82,11 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain />
-        <NavDocuments topics={topics} onTopicSelect={onTopicSelect} />
+        <NavMain onCreateTopic={onCreateTopic} />
+        <NavDocuments
+          topics={topics}
+          onTopicSelect={onTopicSelect}
+        />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>

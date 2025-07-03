@@ -2,53 +2,57 @@
 
 import { useEffect, useState } from "react"
 import { getAuth } from "firebase/auth"
-import { initializeViews } from "@/lib/api/views" // ✅ Add this
-import { API_BASE_URL } from "@/lib/api"
+import { initializeViews } from "@/lib/api/views"
+import { fetchAvailableTopics, type AvailableTopicsResponse } from "@/lib/api/tests"
 
 export interface Topic {
   name: string
   url: string
   icon?: any
+  isBuiltin: boolean
 }
 
 export function useTopics() {
   const [topics, setTopics] = useState<Topic[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchTopics = async () => {
-      try {
-        const user = getAuth().currentUser
-        if (!user) return
-        const token = await user.getIdToken()
+  const refreshTopics = async () => {
+    try {
+      const user = getAuth().currentUser
+      if (!user) return
 
-        // ✅ Step 1: Initialize views
-        await initializeViews()
+      // Initialize views
+      await initializeViews()
 
-        // ✅ Step 2: Fetch topics after views/init
-        const res = await fetch(`${API_BASE_URL}/api/v1/topics/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+      // Fetch available topics (both builtin and user-created)
+      const availableTopics: AvailableTopicsResponse = await fetchAvailableTopics()
 
-        if (!res.ok) throw new Error("Failed to fetch topics")
-
-        const topicsList = await res.json()
-
-        const formattedTopics: Topic[] = topicsList.map((name: string) => ({
+      const formattedTopics: Topic[] = [
+        // Built-in topics
+        ...availableTopics.builtin.map((name: string) => ({
           name,
           url: `/topics/${encodeURIComponent(name)}`,
-        }))
+          isBuiltin: true,
+        })),
+        // User-created topics
+        ...availableTopics.user_created.map((name: string) => ({
+          name,
+          url: `/topics/${encodeURIComponent(name)}`,
+          isBuiltin: false,
+        })),
+      ]
 
-        setTopics(formattedTopics)
-      } catch (err) {
-        console.error("Error fetching topics", err)
-      } finally {
-        setLoading(false)
-      }
+      setTopics(formattedTopics)
+    } catch (err) {
+      console.error("Error fetching topics", err)
+    } finally {
+      setLoading(false)
     }
+  }
 
-    fetchTopics()
+  useEffect(() => {
+    refreshTopics()
   }, [])
 
-  return { topics, loading }
+  return { topics, loading, refreshTopics }
 }

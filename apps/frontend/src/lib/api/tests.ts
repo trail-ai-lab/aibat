@@ -20,6 +20,20 @@ export interface TopicTestsResponse {
   tests: TestResponse[]
 }
 
+export interface AvailableTopicsResponse {
+  builtin: string[]
+  user_created: string[]
+}
+
+export interface CreateTopicRequest {
+  topic: string
+  prompt_topic: string
+  tests: Array<{
+    test: string
+    ground_truth: "acceptable" | "unacceptable"
+  }>
+}
+
 export async function fetchTestsByTopic(topic: string): Promise<TopicTestsResponse> {
   const user = getAuth().currentUser
   if (!user) throw new Error("User not authenticated")
@@ -27,7 +41,7 @@ export async function fetchTestsByTopic(topic: string): Promise<TopicTestsRespon
   const token = await user.getIdToken()
 
   const res = await fetch(`${API_BASE_URL}/api/v1/tests/topic/${encodeURIComponent(topic)}`, {
-    headers: { 
+    headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json'
     },
@@ -41,14 +55,14 @@ export async function fetchTestsByTopic(topic: string): Promise<TopicTestsRespon
   return await res.json()
 }
 
-export async function fetchAvailableTopics(): Promise<string[]> {
+export async function fetchAvailableTopics(): Promise<AvailableTopicsResponse> {
   const user = getAuth().currentUser
   if (!user) throw new Error("User not authenticated")
 
   const token = await user.getIdToken()
 
   const res = await fetch(`${API_BASE_URL}/api/v1/tests/topics/available`, {
-    headers: { 
+    headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json'
     },
@@ -58,6 +72,28 @@ export async function fetchAvailableTopics(): Promise<string[]> {
     throw new Error("Failed to fetch available topics")
   }
 
-  const data = await res.json()
-  return data.topics || []
+  return await res.json()
+}
+
+export async function createTopic(topicData: CreateTopicRequest): Promise<{ message: string; topic: string }> {
+  const user = getAuth().currentUser
+  if (!user) throw new Error("User not authenticated")
+
+  const token = await user.getIdToken()
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/tests/topics/create`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(topicData)
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.detail || "Failed to create topic")
+  }
+
+  return await res.json()
 }
