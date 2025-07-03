@@ -3,11 +3,10 @@
 import os
 import pandas as pd
 from datetime import datetime
-from app.core.firebase_client import db as _db
+from firebase_admin import firestore
 from app.utils.model_selector import get_model_pipeline
-from app.utils.logs import log_action
+from app.core.firebase_client import db as _db
 from uuid import uuid4
-
 
 DEFAULT_TOPICS = {
     "CU0": "Does the following contain the physics concept: Greater height means greater energy? Here is the sentence:",
@@ -19,16 +18,17 @@ DEFAULT_TOPICS = {
 def init_user_data(uid: str):
     topic_ref = _db.collection("users").document(uid).collection("topics")
     test_ref = _db.collection("users").document(uid).collection("tests")
+    data_dir = os.path.join(os.getcwd(), "apps", "backend", "data")
 
     for topic, prompt in DEFAULT_TOPICS.items():
-        # Save topic prompt
+        # Save topic prompt in Firestore
         topic_ref.document(topic).set({
             "prompt": prompt,
             "created_at": datetime.utcnow()
         })
 
         # Load CSV if available
-        csv_path = os.path.join(os.getcwd(), "data", f"{topic}.csv")
+        csv_path = os.path.join(data_dir, f"NTX_{topic}.csv")
         if os.path.exists(csv_path):
             df = pd.read_csv(csv_path)
         else:
@@ -40,8 +40,10 @@ def init_user_data(uid: str):
         pipeline = get_model_pipeline(uid)
 
         for _, row in df.iterrows():
-            title = row["input"]
-            ground_truth = row["output"]
+            title = row.get("input") or row.get("title")
+            ground_truth = row.get("output") or row.get("ground_truth")
+            if not title: continue
+
             label = pipeline.grade(title, topic)
             doc_id = uuid4().hex
 
@@ -55,7 +57,7 @@ def init_user_data(uid: str):
                 "created_at": datetime.utcnow()
             })
 
-    return {"message": "Initial tests and topics loaded!"}
+    return {"message": "Default topics and tests initialized from CSV."}
 
 
 def check_user_initialized(uid: str):
