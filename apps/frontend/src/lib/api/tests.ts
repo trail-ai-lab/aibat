@@ -6,12 +6,14 @@ export interface TestResponse {
   topic: string
   statement: string
   ground_truth: "acceptable" | "unacceptable"
+  your_assessment: "ungraded" | "acceptable" | "unacceptable"
   ai_assessment: "pass" | "fail"
   agreement: boolean
   labeler: string
   description?: string
   author?: string
   model_score?: string
+  is_builtin?: boolean
 }
 
 export interface TopicTestsResponse {
@@ -70,6 +72,29 @@ export async function fetchAvailableTopics(): Promise<AvailableTopicsResponse> {
 
   if (!res.ok) {
     throw new Error("Failed to fetch available topics")
+  }
+
+  return await res.json()
+}
+
+export async function updateTestAssessment(testId: string, assessment: "acceptable" | "unacceptable"): Promise<{ message: string }> {
+  const user = getAuth().currentUser
+  if (!user) throw new Error("User not authenticated")
+
+  const token = await user.getIdToken()
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/tests/assessment/${encodeURIComponent(testId)}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ assessment })
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.detail || "Failed to update assessment")
   }
 
   return await res.json()

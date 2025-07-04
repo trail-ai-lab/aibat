@@ -33,6 +33,8 @@ import {
   IconLoader,
   IconPlus,
   IconTrendingUp,
+  IconCheck,
+  IconX,
 } from "@tabler/icons-react"
 import {
   ColumnDef,
@@ -110,6 +112,7 @@ export const schema = z.object({
   id: z.string(),
   statement: z.string(),
   ground_truth: z.enum(["acceptable", "unacceptable"]),
+  your_assessment: z.enum(["ungraded", "acceptable", "unacceptable"]),
   ai_assessment: z.enum(["pass", "fail"]),
   agreement: z.boolean(),
   topic: z.string(),
@@ -117,6 +120,7 @@ export const schema = z.object({
   description: z.string().optional(),
   author: z.string().optional(),
   model_score: z.string().optional(),
+  is_builtin: z.boolean().optional(),
 })
 
 // Create a separate component for the drag handle
@@ -139,7 +143,7 @@ function DragHandle({ id }: { id: string }) {
   )
 }
 
-const columns: ColumnDef<z.infer<typeof schema>>[] = [
+const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable" | "unacceptable") => void): ColumnDef<z.infer<typeof schema>>[] => [
   {
     id: "drag",
     header: () => null,
@@ -198,20 +202,54 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     ),
   },
   {
-    accessorKey: "ground_truth",
-    header: "Ground Truth",
-    cell: ({ row }) => (
-      <Badge
-        variant="outline"
-        className={`px-1.5 ${
-          row.original.ground_truth === "acceptable"
-            ? "text-green-600 border-green-200"
-            : "text-red-600 border-red-200"
-        }`}
-      >
-        {row.original.ground_truth}
-      </Badge>
-    ),
+    accessorKey: "your_assessment",
+    header: "Your Assessment",
+    cell: ({ row }) => {
+      const assessment = row.original.your_assessment;
+      const testId = row.original.id;
+      
+      if (assessment === "ungraded") {
+        return (
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="px-1.5 text-gray-600 border-gray-200">
+              Ungraded
+            </Badge>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 hover:bg-green-50 text-green-600"
+                onClick={() => onAssessmentChange?.(testId, "acceptable")}
+                title="Mark as Acceptable"
+              >
+                <IconCheck className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 hover:bg-red-50 text-red-600"
+                onClick={() => onAssessmentChange?.(testId, "unacceptable")}
+                title="Mark as Unacceptable"
+              >
+                <IconX className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        );
+      }
+      
+      // For graded items, show the regular badge
+      const badgeClass = assessment === "acceptable"
+        ? "px-1.5 text-green-600 border-green-200"
+        : "px-1.5 text-red-600 border-red-200";
+      const displayText = assessment === "acceptable" ? "Acceptable" : "Unacceptable";
+      
+      return (
+        <Badge variant="outline" className={badgeClass}>
+          {displayText}
+        </Badge>
+      );
+    },
   },
   {
     accessorKey: "agreement",
@@ -287,8 +325,10 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
 
 export function DataTable({
   data: initialData,
+  onAssessmentChange,
 }: {
   data: z.infer<typeof schema>[]
+  onAssessmentChange?: (id: string, assessment: "acceptable" | "unacceptable") => void
 }) {
   const [data, setData] = React.useState(() => initialData)
   const [rowSelection, setRowSelection] = React.useState({})
@@ -308,6 +348,8 @@ export function DataTable({
     useSensor(TouchSensor, {}),
     useSensor(KeyboardSensor, {})
   )
+
+  const columns = React.useMemo(() => createColumns(onAssessmentChange), [onAssessmentChange])
 
   const dataIds = React.useMemo<UniqueIdentifier[]>(
     () => data?.map(({ id }) => id) || [],
@@ -633,12 +675,13 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
                 </Select>
               </div>
               <div className="flex flex-col gap-3">
-                <Label htmlFor="ground_truth">Ground Truth</Label>
-                <Select defaultValue={item.ground_truth}>
-                  <SelectTrigger id="ground_truth" className="w-full">
-                    <SelectValue placeholder="Select ground truth" />
+                <Label htmlFor="your_assessment">Your Assessment</Label>
+                <Select defaultValue={item.your_assessment}>
+                  <SelectTrigger id="your_assessment" className="w-full">
+                    <SelectValue placeholder="Select assessment" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="ungraded">Ungraded</SelectItem>
                     <SelectItem value="acceptable">Acceptable</SelectItem>
                     <SelectItem value="unacceptable">Unacceptable</SelectItem>
                   </SelectContent>

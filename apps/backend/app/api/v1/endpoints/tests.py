@@ -80,3 +80,18 @@ def grade_test(test: TestInput, user=Depends(verify_firebase_token)):
 def get_logs(user=Depends(verify_firebase_token)):
     logs = tests_service.get_logs(user["uid"])
     return {"logs": logs}
+
+
+@router.put("/assessment/{test_id}")
+def update_test_assessment(
+    test_id: str,
+    assessment_data: dict,
+    user=Depends(verify_firebase_token)
+):
+    """
+    Update the assessment for a specific test
+    """
+    try:
+        return tests_service.update_test_assessment(user["uid"], test_id, assessment_data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

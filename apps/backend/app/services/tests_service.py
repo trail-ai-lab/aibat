@@ -2,6 +2,7 @@
 
 import os
 import csv
+from datetime import datetime
 from typing import List, Optional, Dict
 from app.utils.logs import log_test
 from app.models.schemas import TestSample, TestResponse, TopicTestsResponse
@@ -99,12 +100,14 @@ def get_tests_by_topic(topic: str, user_id: str = None) -> TopicTestsResponse:
                             topic=topic,
                             statement=data.get('statement', ''),
                             ground_truth=ground_truth if ground_truth in ['acceptable', 'unacceptable'] else 'acceptable',
+                            your_assessment=ground_truth if ground_truth in ['acceptable', 'unacceptable'] else 'acceptable',  # For user-created topics, use their assessment
                             ai_assessment=ai_assessment if ai_assessment in ['pass', 'fail'] else 'pass',
                             agreement=agreement,
                             labeler=data.get('labeler', 'user'),
                             description=data.get('description', ''),
                             author=data.get('author', ''),
-                            model_score=data.get('model_score', '')
+                            model_score=data.get('model_score', ''),
+                            is_builtin=False
                         )
                         tests.append(test_response)
                     
@@ -121,6 +124,20 @@ def get_tests_by_topic(topic: str, user_id: str = None) -> TopicTestsResponse:
     # Process CSV file for built-in topics
     csv_path = os.path.join(os.getcwd(), "data", f"NTX_{topic}.csv")
     
+    # Get user assessment overrides if available
+    user_assessments = {}
+    if user_id and FIREBASE_AVAILABLE:
+        try:
+            from app.core.firebase_client import db
+            assessments_ref = db.collection("users").document(user_id).collection("assessments")
+            assessment_docs = assessments_ref.stream()
+            
+            for doc in assessment_docs:
+                data = doc.to_dict()
+                user_assessments[data.get('test_id')] = data.get('assessment', 'ungraded')
+        except Exception as e:
+            print(f"Error fetching user assessments: {e}")
+    
     tests = []
     
     try:
@@ -132,9 +149,14 @@ def get_tests_by_topic(topic: str, user_id: str = None) -> TopicTestsResponse:
                 if not row.get('input', '').strip():
                     continue
                 
+                test_id = row.get('', '') or f"{topic}_{len(tests)}"
+                
                 # Calculate agreement between AI assessment and ground truth
                 ground_truth = row.get('output', '').lower()
                 ai_assessment = row.get('label', '').lower()
+                
+                # Check if user has overridden the assessment
+                your_assessment = user_assessments.get(test_id, "ungraded")
                 
                 # Agreement logic: pass means AI thinks it's acceptable, fail means unacceptable
                 agreement = (
@@ -143,16 +165,18 @@ def get_tests_by_topic(topic: str, user_id: str = None) -> TopicTestsResponse:
                 )
                 
                 test_response = TestResponse(
-                    id=row.get('', '') or f"{topic}_{len(tests)}",  # Use first column as ID or generate one
+                    id=test_id,
                     topic=topic,
                     statement=row.get('input', ''),
                     ground_truth=ground_truth if ground_truth in ['acceptable', 'unacceptable'] else 'acceptable',
+                    your_assessment=your_assessment,  # Use user override or default to ungraded
                     ai_assessment=ai_assessment if ai_assessment in ['pass', 'fail'] else 'pass',
                     agreement=agreement,
                     labeler=row.get('labeler', 'adatest_default'),
                     description=row.get('description', ''),
                     author=row.get('author', ''),
-                    model_score=row.get('model score', '')
+                    model_score=row.get('model score', ''),
+                    is_builtin=True
                 )
                 
                 tests.append(test_response)
@@ -246,3 +270,34 @@ def create_topic(user_id: str, topic_data: dict) -> dict:
         
     except Exception as e:
         raise Exception(f"Error creating topic: {str(e)}")
+
+def update_test_assessment(user_id: str, test_id: str, assessment_data: dict) -> dict:
+    """
+    Update the assessment for a specific test
+    """
+    if not FIREBASE_AVAILABLE:
+        raise Exception("Firebase not available")
+    
+    try:
+        from app.core.firebase_client import db
+        
+        assessment = assessment_data.get("assessment")
+        if assessment not in ["acceptable", "unacceptable"]:
+            raise Exception("Invalid assessment value")
+        
+        # For builtin topics, we need to store user assessments separately
+        # since we can't modify the original CSV data
+        
+        # Check if this is a user assessment override
+        user_assessment_ref = db.collection("users").document(user_id).collection("assessments").document(test_id)
+        
+        user_assessment_ref.set({
+            "test_id": test_id,
+            "assessment": assessment,
+            "updated_at": datetime.utcnow()
+        })
+        
+        return {"message": "Assessment updated successfully", "test_id": test_id, "assessment": assessment}
+        
+    except Exception as e:
+        raise Exception(f"Error updating assessment: {str(e)}")

@@ -20,6 +20,8 @@ import { useTopics } from "@/hooks/use-topics"
 import { Badge } from "@/components/ui/badge"
 import { IconLoader, IconDatabase } from "@tabler/icons-react"
 import { fetchTopicPrompt } from "@/lib/api/topics"
+import { updateTestAssessment } from "@/lib/api/tests"
+import { toast } from "sonner"
 
 export default function Page() {
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null)
@@ -69,6 +71,7 @@ export default function Page() {
     id: test.id,
     statement: test.statement,
     ground_truth: test.ground_truth,
+    your_assessment: test.your_assessment,
     ai_assessment: test.ai_assessment,
     agreement: test.agreement,
     topic: test.topic,
@@ -76,7 +79,26 @@ export default function Page() {
     description: test.description,
     author: test.author,
     model_score: test.model_score,
+    is_builtin: test.is_builtin,
   }))
+
+  const handleAssessmentChange = async (testId: string, assessment: "acceptable" | "unacceptable") => {
+    try {
+      // Update the assessment via API
+      await updateTestAssessment(testId, assessment)
+      
+      // Show success message
+      toast.success(`Assessment updated to ${assessment}`)
+      
+      // Refresh the tests to show the change
+      if (currentTopic) {
+        await fetchTests(currentTopic)
+      }
+    } catch (error) {
+      console.error("Error updating assessment:", error)
+      toast.error("Failed to update assessment")
+    }
+  }
 
   return (
     <SidebarProvider
@@ -157,7 +179,7 @@ export default function Page() {
 
               {/* Data Table */}
               {!loading && !error && tableData.length > 0 && (
-                <DataTable data={tableData} />
+                <DataTable data={tableData} onAssessmentChange={handleAssessmentChange} />
               )}
 
               {/* Empty State */}

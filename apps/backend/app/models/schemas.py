@@ -19,12 +19,14 @@ class TestResponse(BaseModel):
     topic: str
     statement: str  # The input field renamed for frontend clarity
     ground_truth: Literal["acceptable", "unacceptable"]
+    your_assessment: Literal["ungraded", "acceptable", "unacceptable"]
     ai_assessment: Literal["pass", "fail"]
     agreement: bool  # Whether AI assessment matches ground truth
     labeler: str
     description: Optional[str] = ""
     author: Optional[str] = ""
     model_score: Optional[str] = ""
+    is_builtin: Optional[bool] = False
 
 class TopicTestsResponse(BaseModel):
     """Response model for topic-specific tests"""
