@@ -16,6 +16,9 @@ def get_model_pipeline(uid: str):
         model_id = data.get("id", DEFAULT_MODEL)
 
     if model_id not in MODEL_REGISTRY:
-        raise ValueError(f"Model '{model_id}' is not registered.")
+        print(f"Warning: Model '{model_id}' is not registered. Falling back to default model '{DEFAULT_MODEL}'.")
+        # Update user's config to use the default model
+        user_config_ref.set({"id": DEFAULT_MODEL})
+        model_id = DEFAULT_MODEL
 
     return MODEL_REGISTRY[model_id]

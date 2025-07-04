@@ -36,6 +36,11 @@ import {
   IconCheck,
   IconX,
 } from "@tabler/icons-react"
+import { ModelSelector } from "@/components/model-selector"
+import { ChartPieLabel } from "@/components/char-area-interactive"
+import { ChartTooltipDefault } from "@/components/chart-tooltip-default"
+
+
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -58,12 +63,6 @@ import { z } from "zod"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Drawer,
@@ -113,8 +112,8 @@ export const schema = z.object({
   statement: z.string(),
   ground_truth: z.enum(["acceptable", "unacceptable"]),
   your_assessment: z.enum(["ungraded", "acceptable", "unacceptable"]),
-  ai_assessment: z.enum(["pass", "fail"]),
-  agreement: z.boolean(),
+  ai_assessment: z.enum(["pass", "fail", "grading"]),
+  agreement: z.boolean().nullable(),
   topic: z.string(),
   labeler: z.string().optional(),
   description: z.string().optional(),
@@ -186,20 +185,38 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
   {
     accessorKey: "ai_assessment",
     header: "AI Assessment",
-    cell: ({ row }) => (
-      <div className="w-32">
-        <Badge
-          variant="outline"
-          className={`px-1.5 ${
-            row.original.ai_assessment === "pass"
-              ? "text-green-600 border-green-200"
-              : "text-red-600 border-red-200"
-          }`}
-        >
-          {row.original.ai_assessment === "pass" ? "Acceptable" : "Unacceptable"}
-        </Badge>
-      </div>
-    ),
+    cell: ({ row }) => {
+      const assessment = row.original.ai_assessment;
+      
+      if (assessment === "grading") {
+        return (
+          <div className="w-32">
+            <Badge
+              variant="outline"
+              className="px-1.5 text-blue-600 border-blue-200"
+            >
+              <IconLoader className="animate-spin mr-1 h-3 w-3" />
+              Grading
+            </Badge>
+          </div>
+        );
+      }
+      
+      return (
+        <div className="w-32">
+          <Badge
+            variant="outline"
+            className={`px-1.5 ${
+              assessment === "pass"
+                ? "text-green-600 border-green-200"
+                : "text-red-600 border-red-200"
+            }`}
+          >
+            {assessment === "pass" ? "Acceptable" : "Unacceptable"}
+          </Badge>
+        </div>
+      );
+    },
   },
   {
     accessorKey: "your_assessment",
@@ -254,23 +271,42 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
   {
     accessorKey: "agreement",
     header: "Agreement",
-    cell: ({ row }) => (
-      <Badge
-        variant="outline"
-        className={`px-1.5 ${
-          row.original.agreement
-            ? "text-green-600 border-green-200"
-            : "text-orange-600 border-orange-200"
-        }`}
-      >
-        {row.original.agreement ? (
-          <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400 mr-1" />
-        ) : (
-          <IconLoader className="mr-1" />
-        )}
-        {row.original.agreement ? "Match" : "Mismatch"}
-      </Badge>
-    ),
+    cell: ({ row }) => {
+      const agreement = row.original.agreement;
+      const aiAssessment = row.original.ai_assessment;
+      const yourAssessment = row.original.your_assessment;
+      
+      // If AI is still grading or user hasn't assessed, show pending
+      if (aiAssessment === "grading" || yourAssessment === "ungraded" || agreement === null) {
+        return (
+          <Badge
+            variant="outline"
+            className="px-1.5 text-gray-600 border-gray-200"
+          >
+            <IconLoader className="mr-1 h-3 w-3" />
+            Pending
+          </Badge>
+        );
+      }
+      
+      return (
+        <Badge
+          variant="outline"
+          className={`px-1.5 ${
+            agreement
+              ? "text-green-600 border-green-200"
+              : "text-orange-600 border-orange-200"
+          }`}
+        >
+          {agreement ? (
+            <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400 mr-1" />
+          ) : (
+            <IconX className="mr-1 h-3 w-3" />
+          )}
+          {agreement ? "Match" : "Mismatch"}
+        </Badge>
+      );
+    },
   },
     {
     id: "actions",
@@ -312,6 +348,7 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
       style={{
         transform: CSS.Transform.toString(transform),
         transition: transition,
+        height: 'auto',
       }}
     >
       {row.getVisibleCells().map((cell) => (
@@ -326,9 +363,11 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
 export function DataTable({
   data: initialData,
   onAssessmentChange,
+  currentTopic,
 }: {
   data: z.infer<typeof schema>[]
   onAssessmentChange?: (id: string, assessment: "acceptable" | "unacceptable") => void
+  currentTopic?: string
 }) {
   const [data, setData] = React.useState(() => initialData)
   const [rowSelection, setRowSelection] = React.useState({})
@@ -411,55 +450,17 @@ export function DataTable({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="outline">Outline</SelectItem>
-            <SelectItem value="past-performance">Past Performance</SelectItem>
-            <SelectItem value="key-personnel">Key Personnel</SelectItem>
-            <SelectItem value="focus-documents">Focus Documents</SelectItem>
+            <SelectItem value="evaluations">Evaluations</SelectItem>
           </SelectContent>
         </Select>
         <TabsList className="**:data-[slot=badge]:bg-muted-foreground/30 hidden **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 @4xl/main:flex">
-          <TabsTrigger value="outline">Outline</TabsTrigger>
-          <TabsTrigger value="past-performance">
-            Past Performance <Badge variant="secondary">3</Badge>
+          <TabsTrigger value="outline">Assessments</TabsTrigger>
+          <TabsTrigger value="evaluations">
+            Evaluations
           </TabsTrigger>
-          <TabsTrigger value="key-personnel">
-            Key Personnel <Badge variant="secondary">2</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="focus-documents">Focus Documents</TabsTrigger>
         </TabsList>
         <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <IconLayoutColumns />
-                <span className="hidden lg:inline">Customize Columns</span>
-                <span className="lg:hidden">Columns</span>
-                <IconChevronDown />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              {table
-                .getAllColumns()
-                .filter(
-                  (column) =>
-                    typeof column.accessorFn !== "undefined" &&
-                    column.getCanHide()
-                )
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }
-                    >
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
-                  )
-                })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <ModelSelector currentTopic={currentTopic} />
           <Button variant="outline" size="sm">
             <IconPlus />
             <span className="hidden lg:inline">Add Section</span>
@@ -600,43 +601,19 @@ export function DataTable({
         </div>
       </TabsContent>
       <TabsContent
-        value="past-performance"
+        value="evaluations"
         className="flex flex-col px-4 lg:px-6"
       >
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
-      </TabsContent>
-      <TabsContent value="key-personnel" className="flex flex-col px-4 lg:px-6">
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
-      </TabsContent>
-      <TabsContent
-        value="focus-documents"
-        className="flex flex-col px-4 lg:px-6"
-      >
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
+        <div className="grid auto-rows-min gap-4 md:grid-cols-3">
+            <ChartPieLabel/>
+        <ChartTooltipDefault/>
+        <ChartTooltipDefault/>
+          </div>
+        {/* <EvaluationsChart data={data} currentTopic={currentTopic} /> */}
       </TabsContent>
     </Tabs>
   )
 }
-
-const chartData = [
-  { month: "January", desktop: 186, mobile: 80 },
-  { month: "February", desktop: 305, mobile: 200 },
-  { month: "March", desktop: 237, mobile: 120 },
-  { month: "April", desktop: 73, mobile: 190 },
-  { month: "May", desktop: 209, mobile: 130 },
-  { month: "June", desktop: 214, mobile: 140 },
-]
-
-const chartConfig = {
-  desktop: {
-    label: "Desktop",
-    color: "var(--primary)",
-  },
-  mobile: {
-    label: "Mobile",
-    color: "var(--primary)",
-  },
-} satisfies ChartConfig
 
 function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
   const isMobile = useIsMobile()
@@ -671,6 +648,7 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
                   <SelectContent>
                     <SelectItem value="pass">Pass (Acceptable)</SelectItem>
                     <SelectItem value="fail">Fail (Unacceptable)</SelectItem>
+                    <SelectItem value="grading">Grading...</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -697,7 +675,13 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
                 <Label htmlFor="agreement">Agreement</Label>
                 <Input
                   id="agreement"
-                  defaultValue={item.agreement ? "Match" : "Mismatch"}
+                  defaultValue={
+                    item.agreement === null
+                      ? "Pending"
+                      : item.agreement
+                        ? "Match"
+                        : "Mismatch"
+                  }
                   readOnly
                 />
               </div>

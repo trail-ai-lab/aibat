@@ -36,6 +36,24 @@ def get_tests_by_topic(topic_name: str, user=Depends(verify_firebase_token)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/topic/{topic_name}/fast", response_model=TopicTestsResponse)
+def get_tests_by_topic_fast(topic_name: str, user=Depends(verify_firebase_token)):
+    """
+    Get all tests for a specific topic quickly without AI grading
+    Returns tests with 'grading' status for AI assessment
+    """
+    try:
+        return tests_service.get_tests_by_topic_fast(topic_name, user["uid"])
+    except FileNotFoundError:
+        available_topics = tests_service.get_available_topics(user["uid"])
+        all_topics = available_topics["builtin"] + available_topics["user_created"]
+        raise HTTPException(
+            status_code=404,
+            detail=f"No tests found for topic '{topic_name}'. Available topics: {all_topics}"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/topics/available")
 def get_available_topics(user=Depends(verify_firebase_token)):
@@ -76,6 +94,37 @@ def grade_test(test: TestInput, user=Depends(verify_firebase_token)):
     return {"label": result}
 
 
+
+
+@router.post("/grade/{topic_name}/{test_id}")
+def grade_single_test(
+    topic_name: str,
+    test_id: str,
+    user=Depends(verify_firebase_token)
+):
+    """
+    Grade a single test statement and return the AI assessment
+    """
+    try:
+        result = tests_service.grade_single_test(topic_name, test_id, user["uid"])
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/assessment/{test_id}/optimized")
+def update_test_assessment_optimized(
+    test_id: str,
+    assessment_data: dict,
+    user=Depends(verify_firebase_token)
+):
+    """
+    Update the assessment for a specific test with optimized agreement calculation
+    """
+    try:
+        return tests_service.update_test_assessment_with_agreement(user["uid"], test_id, assessment_data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 @router.get("/log/")
 def get_logs(user=Depends(verify_firebase_token)):
     logs = tests_service.get_logs(user["uid"])
@@ -93,5 +142,24 @@ def update_test_assessment(
     """
     try:
         return tests_service.update_test_assessment(user["uid"], test_id, assessment_data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/cache/clear/{topic_name}")
+def clear_topic_cache(
+    topic_name: str,
+    cache_data: dict,
+    user=Depends(verify_firebase_token)
+):
+    """
+    Clear cached assessments for a specific topic and model combination
+    """
+    try:
+        model_id = cache_data.get("model_id")
+        if not model_id:
+            raise HTTPException(status_code=400, detail="model_id is required")
+        
+        return tests_service.clear_topic_cache(user["uid"], topic_name, model_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
