@@ -619,6 +619,120 @@ def create_topic(user_id: str, topic_data: dict) -> dict:
     except Exception as e:
         raise Exception(f"Error creating topic: {str(e)}")
 
+def add_statements_to_topic(user_id: str, statements_data: dict) -> dict:
+    """
+    Add new statements to an existing topic in Firestore and cache AI assessments
+    """
+    if not FIREBASE_AVAILABLE:
+        raise Exception("Firebase not available")
+    
+    try:
+        from app.core.firebase_client import db
+        from datetime import datetime
+        
+        topic_name = statements_data["topic"]
+        tests = statements_data["tests"]
+        
+        # Check if topic exists
+        topic_ref = db.collection("users").document(user_id).collection("topics").document(topic_name)
+        topic_doc = topic_ref.get()
+        
+        if not topic_doc.exists:
+            raise Exception(f"Topic '{topic_name}' does not exist")
+        
+        topic_data = topic_doc.to_dict()
+        prompt = topic_data.get("prompt", "")
+        
+        # Get current model ID for caching
+        current_model_id = "groq-llama3"  # Default
+        try:
+            user_config_ref = db.collection("users").document(user_id).collection("config").document("model")
+            doc = user_config_ref.get()
+            if doc.exists:
+                data = doc.to_dict()
+                current_model_id = data.get("id", "groq-llama3")
+        except Exception as e:
+            print(f"Error getting current model: {e}")
+        
+        # Get the model pipeline for grading
+        model_pipeline = None
+        try:
+            model_pipeline = get_model_pipeline(user_id)
+        except Exception as e:
+            print(f"Error getting model pipeline: {e}")
+        
+        # Save new tests in Firestore and prepare for caching
+        tests_ref = db.collection("users").document(user_id).collection("tests")
+        assessments_to_cache = []
+        added_count = 0
+        
+        for test in tests:
+            statement = test["test"]
+            ground_truth = test["ground_truth"]
+            
+            # Skip empty statements
+            if not statement.strip():
+                continue
+            
+            # Generate AI assessment using the actual model pipeline
+            ai_assessment = "pass"  # Default fallback
+            if model_pipeline and prompt:
+                try:
+                    # Call the actual grading function
+                    grade_result = model_pipeline.grade(statement, prompt)
+                    # Convert acceptable/unacceptable to pass/fail, handle unknown
+                    if grade_result == "acceptable":
+                        ai_assessment = "pass"
+                    elif grade_result == "unacceptable":
+                        ai_assessment = "fail"
+                    else:  # unknown or any other response
+                        ai_assessment = "pass"  # Default fallback for statement addition
+                except Exception as e:
+                    print(f"Error grading statement during statement addition: {e}")
+            
+            test_doc = tests_ref.document()  # Auto-generate ID
+            test_doc.set({
+                "topic": topic_name,
+                "statement": statement,
+                "ground_truth": ground_truth,
+                "ai_assessment": ai_assessment,
+                "labeler": "user",
+                "description": "",
+                "author": user_id,
+                "model_score": "",
+                "created_at": datetime.utcnow()
+            })
+            
+            # Add to cache list
+            assessments_to_cache.append({
+                "test_id": test_doc.id,
+                "statement": statement,
+                "ai_assessment": ai_assessment
+            })
+            
+            added_count += 1
+        
+        # Update topic test count
+        current_test_count = topic_data.get("test_count", 0)
+        topic_ref.update({
+            "test_count": current_test_count + added_count,
+            "updated_at": datetime.utcnow()
+        })
+        
+        # Cache all assessments for this topic and model
+        if assessments_to_cache:
+            cached_count = cache_multiple_assessments(user_id, topic_name, current_model_id, assessments_to_cache)
+            print(f"Cached {cached_count} new assessments for topic {topic_name} with model {current_model_id}")
+        
+        return {
+            "message": f"Successfully added {added_count} statements to topic '{topic_name}'",
+            "topic": topic_name,
+            "added_count": added_count
+        }
+        
+    except Exception as e:
+        raise Exception(f"Error adding statements to topic: {str(e)}")
+
 def update_test_assessment(user_id: str, test_id: str, assessment_data: dict) -> dict:
     """
     Update the assessment for a specific test and recalculate agreement
