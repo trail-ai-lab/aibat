@@ -58,18 +58,18 @@ def test_caching_system():
     
     # Test 5: Test different model (should return empty)
     print("\nTest 5: Testing different model...")
-    different_model_cached = get_cached_assessments_for_topic(user_id, topic, "groq-mistral")
+    different_model_cached = get_cached_assessments_for_topic(user_id, topic, "groq-gemma2")
     print(f"Found {len(different_model_cached)} cached assessments for different model")
     
     # Test 6: Cache for different model
     print("\nTest 6: Caching for different model...")
-    success = cache_assessment(user_id, topic, "groq-mistral", test_id, statement, "fail")
+    success = cache_assessment(user_id, topic, "groq-gemma2", test_id, statement, "fail")
     print(f"Cache result for different model: {'SUCCESS' if success else 'FAILED'}")
     
     # Test 7: Verify separate caches
     print("\nTest 7: Verifying separate caches...")
     llama_cached = get_cached_assessment(user_id, topic, "groq-llama3", test_id)
-    mistral_cached = get_cached_assessment(user_id, topic, "groq-mistral", test_id)
+    mistral_cached = get_cached_assessment(user_id, topic, "groq-gemma2", test_id)
     print(f"Llama assessment: {llama_cached}")
     print(f"Mistral assessment: {mistral_cached}")
     print(f"Different assessments: {'SUCCESS' if llama_cached != mistral_cached else 'FAILED'}")
@@ -82,7 +82,7 @@ def test_caching_system():
     # Test 9: Verify cache cleared
     print("\nTest 9: Verifying cache cleared...")
     cleared_cached = get_cached_assessments_for_topic(user_id, topic, "groq-llama3")
-    mistral_still_cached = get_cached_assessments_for_topic(user_id, topic, "groq-mistral")
+    mistral_still_cached = get_cached_assessments_for_topic(user_id, topic, "groq-gemma2")
     print(f"Llama cache after clear: {len(cleared_cached)} assessments")
     print(f"Mistral cache after clear: {len(mistral_still_cached)} assessments")
     print(f"Selective clear: {'SUCCESS' if len(cleared_cached) == 0 and len(mistral_still_cached) > 0 else 'FAILED'}")
