@@ -114,8 +114,8 @@ export const schema = z.object({
   statement: z.string(),
   ground_truth: z.enum(["acceptable", "unacceptable"]),
   your_assessment: z.enum(["ungraded", "acceptable", "unacceptable"]),
-  ai_assessment: z.enum(["pass", "fail"]),
-  agreement: z.boolean(),
+  ai_assessment: z.enum(["pass", "fail", "grading"]),
+  agreement: z.boolean().nullable(),
   topic: z.string(),
   labeler: z.string().optional(),
   description: z.string().optional(),
@@ -187,20 +187,38 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
   {
     accessorKey: "ai_assessment",
     header: "AI Assessment",
-    cell: ({ row }) => (
-      <div className="w-32">
-        <Badge
-          variant="outline"
-          className={`px-1.5 ${
-            row.original.ai_assessment === "pass"
-              ? "text-green-600 border-green-200"
-              : "text-red-600 border-red-200"
-          }`}
-        >
-          {row.original.ai_assessment === "pass" ? "Acceptable" : "Unacceptable"}
-        </Badge>
-      </div>
-    ),
+    cell: ({ row }) => {
+      const assessment = row.original.ai_assessment;
+      
+      if (assessment === "grading") {
+        return (
+          <div className="w-32">
+            <Badge
+              variant="outline"
+              className="px-1.5 text-blue-600 border-blue-200"
+            >
+              <IconLoader className="animate-spin mr-1 h-3 w-3" />
+              Grading
+            </Badge>
+          </div>
+        );
+      }
+      
+      return (
+        <div className="w-32">
+          <Badge
+            variant="outline"
+            className={`px-1.5 ${
+              assessment === "pass"
+                ? "text-green-600 border-green-200"
+                : "text-red-600 border-red-200"
+            }`}
+          >
+            {assessment === "pass" ? "Acceptable" : "Unacceptable"}
+          </Badge>
+        </div>
+      );
+    },
   },
   {
     accessorKey: "your_assessment",
@@ -255,23 +273,42 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
   {
     accessorKey: "agreement",
     header: "Agreement",
-    cell: ({ row }) => (
-      <Badge
-        variant="outline"
-        className={`px-1.5 ${
-          row.original.agreement
-            ? "text-green-600 border-green-200"
-            : "text-orange-600 border-orange-200"
-        }`}
-      >
-        {row.original.agreement ? (
-          <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400 mr-1" />
-        ) : (
-          <IconLoader className="mr-1" />
-        )}
-        {row.original.agreement ? "Match" : "Mismatch"}
-      </Badge>
-    ),
+    cell: ({ row }) => {
+      const agreement = row.original.agreement;
+      const aiAssessment = row.original.ai_assessment;
+      const yourAssessment = row.original.your_assessment;
+      
+      // If AI is still grading or user hasn't assessed, show pending
+      if (aiAssessment === "grading" || yourAssessment === "ungraded" || agreement === null) {
+        return (
+          <Badge
+            variant="outline"
+            className="px-1.5 text-gray-600 border-gray-200"
+          >
+            <IconLoader className="mr-1 h-3 w-3" />
+            Pending
+          </Badge>
+        );
+      }
+      
+      return (
+        <Badge
+          variant="outline"
+          className={`px-1.5 ${
+            agreement
+              ? "text-green-600 border-green-200"
+              : "text-orange-600 border-orange-200"
+          }`}
+        >
+          {agreement ? (
+            <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400 mr-1" />
+          ) : (
+            <IconX className="mr-1 h-3 w-3" />
+          )}
+          {agreement ? "Match" : "Mismatch"}
+        </Badge>
+      );
+    },
   },
     {
     id: "actions",
@@ -640,6 +677,7 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
                   <SelectContent>
                     <SelectItem value="pass">Pass (Acceptable)</SelectItem>
                     <SelectItem value="fail">Fail (Unacceptable)</SelectItem>
+                    <SelectItem value="grading">Grading...</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -666,7 +704,13 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
                 <Label htmlFor="agreement">Agreement</Label>
                 <Input
                   id="agreement"
-                  defaultValue={item.agreement ? "Match" : "Mismatch"}
+                  defaultValue={
+                    item.agreement === null
+                      ? "Pending"
+                      : item.agreement
+                        ? "Match"
+                        : "Mismatch"
+                  }
                   readOnly
                 />
               </div>

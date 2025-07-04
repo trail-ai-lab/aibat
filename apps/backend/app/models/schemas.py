@@ -20,8 +20,8 @@ class TestResponse(BaseModel):
     statement: str  # The input field renamed for frontend clarity
     ground_truth: Literal["acceptable", "unacceptable"]
     your_assessment: Literal["ungraded", "acceptable", "unacceptable"]
-    ai_assessment: Literal["pass", "fail"]
-    agreement: bool  # Whether AI assessment matches ground truth
+    ai_assessment: Literal["pass", "fail", "grading"]
+    agreement: Optional[bool] = None  # Whether AI assessment matches ground truth
     labeler: str
     description: Optional[str] = ""
     author: Optional[str] = ""
