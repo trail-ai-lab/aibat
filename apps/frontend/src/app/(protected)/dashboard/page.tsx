@@ -181,7 +181,11 @@ export default function Page() {
 
               {/* Data Table */}
               {!loading && !error && tableData.length > 0 && (
-                <DataTable data={tableData} onAssessmentChange={handleAssessmentChange} />
+                <DataTable
+                  data={tableData}
+                  onAssessmentChange={handleAssessmentChange}
+                  currentTopic={currentTopic || undefined}
+                />
               )}
 
               {/* Empty State */}

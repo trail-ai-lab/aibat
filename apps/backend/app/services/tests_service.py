@@ -283,8 +283,13 @@ def get_tests_by_topic(topic: str, user_id: str = None) -> TopicTestsResponse:
                                 try:
                                     # Call the actual grading function
                                     grade_result = model_pipeline.grade(statement, topic_prompt)
-                                    # Convert acceptable/unacceptable to pass/fail
-                                    ai_assessment_raw = "pass" if grade_result == "acceptable" else "fail"
+                                    # Convert acceptable/unacceptable to pass/fail, handle unknown
+                                    if grade_result == "acceptable":
+                                        ai_assessment_raw = "pass"
+                                    elif grade_result == "unacceptable":
+                                        ai_assessment_raw = "fail"
+                                    else:  # unknown or any other response
+                                        ai_assessment_raw = "grading"
                                     
                                     # Add to cache list
                                     assessments_to_cache.append({
@@ -413,8 +418,13 @@ def get_tests_by_topic(topic: str, user_id: str = None) -> TopicTestsResponse:
                         try:
                             # Call the actual grading function
                             grade_result = model_pipeline.grade(statement, topic_prompt)
-                            # Convert acceptable/unacceptable to pass/fail
-                            ai_assessment_raw = "pass" if grade_result == "acceptable" else "fail"
+                            # Convert acceptable/unacceptable to pass/fail, handle unknown
+                            if grade_result == "acceptable":
+                                ai_assessment_raw = "pass"
+                            elif grade_result == "unacceptable":
+                                ai_assessment_raw = "fail"
+                            else:  # unknown or any other response
+                                ai_assessment_raw = "grading"
                             
                             # Add to cache list
                             assessments_to_cache.append({
@@ -569,8 +579,13 @@ def create_topic(user_id: str, topic_data: dict) -> dict:
                 try:
                     # Call the actual grading function
                     grade_result = model_pipeline.grade(statement, prompt)
-                    # Convert acceptable/unacceptable to pass/fail
-                    ai_assessment = "pass" if grade_result == "acceptable" else "fail"
+                    # Convert acceptable/unacceptable to pass/fail, handle unknown
+                    if grade_result == "acceptable":
+                        ai_assessment = "pass"
+                    elif grade_result == "unacceptable":
+                        ai_assessment = "fail"
+                    else:  # unknown or any other response
+                        ai_assessment = "pass"  # Default fallback for topic creation
                 except Exception as e:
                     print(f"Error grading statement during topic creation: {e}")
             
@@ -702,7 +717,13 @@ def grade_single_test(topic: str, test_id: str, user_id: str = None) -> dict:
         # Grade the statement
         try:
             grade_result = model_pipeline.grade(statement, topic_prompt)
-            ai_assessment = "pass" if grade_result == "acceptable" else "fail"
+            # Convert acceptable/unacceptable to pass/fail, handle unknown
+            if grade_result == "acceptable":
+                ai_assessment = "pass"
+            elif grade_result == "unacceptable":
+                ai_assessment = "fail"
+            else:  # unknown or any other response
+                ai_assessment = "grading"
             
             # Calculate agreement if user has assessed this test
             agreement = None

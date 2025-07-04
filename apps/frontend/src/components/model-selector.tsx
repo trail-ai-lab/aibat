@@ -11,7 +11,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useModels } from "@/hooks/use-models"
 
-export function ModelSelector() {
+interface ModelSelectorProps {
+  currentTopic?: string
+}
+
+export function ModelSelector({ currentTopic }: ModelSelectorProps = {}) {
   const { models, loading, selectedModel, handleModelSelect } = useModels()
   const [isOpen, setIsOpen] = useState(false)
 
@@ -44,7 +48,7 @@ export function ModelSelector() {
           <DropdownMenuItem
             key={model.id}
             onClick={() => {
-              handleModelSelect(model.id)
+              handleModelSelect(model.id, currentTopic)
               setIsOpen(false)
             }}
             className={selectedModel === model.id ? "bg-accent" : ""}

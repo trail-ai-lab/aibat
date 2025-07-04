@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getAvailableModels, getCurrentModel, selectModel, type Model } from '@/lib/api/models'
+import { clearTopicCache } from '@/lib/api/tests'
 import { toast } from 'sonner'
 
 export function useModels() {
@@ -7,6 +8,7 @@ export function useModels() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedModel, setSelectedModel] = useState<string>('groq-llama3') // Default model
+  const [previousModel, setPreviousModel] = useState<string | null>(null)
 
   const fetchModels = async () => {
     try {
@@ -21,6 +23,7 @@ export function useModels() {
       
       setModels(availableModels)
       setSelectedModel(currentModel.id)
+      setPreviousModel(currentModel.id)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch models'
       setError(errorMessage)
@@ -30,10 +33,24 @@ export function useModels() {
     }
   }
 
-  const handleModelSelect = async (modelId: string) => {
+  const handleModelSelect = async (modelId: string, currentTopic?: string) => {
     try {
+      const previousModelId = selectedModel
+      
       await selectModel(modelId)
       setSelectedModel(modelId)
+      setPreviousModel(previousModelId)
+      
+      // Clear cache for current topic if provided
+      if (currentTopic && previousModelId !== modelId) {
+        try {
+          await clearTopicCache(currentTopic, previousModelId)
+          console.log(`Cleared cache for topic ${currentTopic} and previous model ${previousModelId}`)
+        } catch (cacheError) {
+          console.warn('Failed to clear cache, but model selection succeeded:', cacheError)
+        }
+      }
+      
       toast.success(`Model changed to ${models.find(m => m.id === modelId)?.name || modelId}`)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to select model'
@@ -51,6 +68,7 @@ export function useModels() {
     loading,
     error,
     selectedModel,
+    previousModel,
     handleModelSelect,
     refetch: fetchModels,
   }

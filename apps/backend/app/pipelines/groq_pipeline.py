@@ -15,7 +15,7 @@ class GroqPipeline:
             raise ValueError("GROQ_API_KEY not found in environment variables")
         
         instruction = f"{topic_prompt} {statement}" if topic_prompt else f"Is this statement acceptable or unacceptable? {statement}"
-        
+
         messages = [
             {
                 "role": "system",
@@ -46,18 +46,21 @@ class GroqPipeline:
             result = response.json()
             prediction = result["choices"][0]["message"]["content"].strip().lower()
 
-            if "acceptable" in prediction and "unacceptable" not in prediction:
+            # Handle known outputs explicitly
+            if prediction == "acceptable":
                 return "acceptable"
-            elif "unacceptable" in prediction:
+            elif prediction == "unacceptable":
                 return "unacceptable"
             else:
-                return "unacceptable"
+                print(f"Unexpected model response: '{prediction}'")
+                return "unknown"
         except requests.exceptions.RequestException as e:
             print(f"Error calling Groq API: {e}")
-            return "unacceptable"
+            return "unknown"
         except (KeyError, IndexError) as e:
             print(f"Error parsing Groq API response: {e}")
-            return "unacceptable"
+            return "unknown"
+
 
     def custom_perturb(self, prompt: str) -> str:
         return f"{self.model}: {prompt}"
