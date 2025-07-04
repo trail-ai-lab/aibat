@@ -55,59 +55,71 @@ def get_tests_by_topic(topic: str, user_id: str = None) -> TopicTestsResponse:
     """
     Get all tests for a specific topic from CSV files or Firestore
     """
-    # First try to get from Firestore (user-created topics)
-    if user_id and FIREBASE_AVAILABLE:
-        try:
-            from app.core.firebase_client import db
-            
-            # Check if this is a user-created topic
-            topic_doc = db.collection("users").document(user_id).collection("topics").document(topic).get()
-            if topic_doc.exists:
-                # Get tests from Firestore
-                tests_ref = db.collection("users").document(user_id).collection("tests").where("topic", "==", topic)
-                test_docs = tests_ref.stream()
+    # Check if this is a built-in topic (has a prompt in DEFAULT_TOPICS)
+    try:
+        from app.services.views_service import DEFAULT_TOPICS
+        is_builtin_topic = topic in DEFAULT_TOPICS
+    except ImportError:
+        is_builtin_topic = topic in ["CU0", "CU5", "Food"]
+    
+    if is_builtin_topic:
+        # For built-in topics, always use CSV files
+        csv_path = os.path.join(os.getcwd(), "data", f"NTX_{topic}.csv")
+        
+        if not os.path.exists(csv_path):
+            raise FileNotFoundError(f"CSV file for built-in topic '{topic}' not found")
+    else:
+        # For user-created topics, get from Firestore
+        if user_id and FIREBASE_AVAILABLE:
+            try:
+                from app.core.firebase_client import db
                 
-                tests = []
-                for doc in test_docs:
-                    data = doc.to_dict()
+                # Check if this is a user-created topic
+                topic_doc = db.collection("users").document(user_id).collection("topics").document(topic).get()
+                if topic_doc.exists:
+                    # Get tests from Firestore
+                    tests_ref = db.collection("users").document(user_id).collection("tests").where("topic", "==", topic)
+                    test_docs = tests_ref.stream()
                     
-                    # Calculate agreement between AI assessment and ground truth
-                    ground_truth = data.get('ground_truth', 'acceptable').lower()
-                    ai_assessment = data.get('ai_assessment', 'pass').lower()
+                    tests = []
+                    for doc in test_docs:
+                        data = doc.to_dict()
+                        
+                        # Calculate agreement between AI assessment and ground truth
+                        ground_truth = data.get('ground_truth', 'acceptable').lower()
+                        ai_assessment = data.get('ai_assessment', 'pass').lower()
+                        
+                        agreement = (
+                            (ai_assessment == 'pass' and ground_truth == 'acceptable') or
+                            (ai_assessment == 'fail' and ground_truth == 'unacceptable')
+                        )
+                        
+                        test_response = TestResponse(
+                            id=doc.id,
+                            topic=topic,
+                            statement=data.get('statement', ''),
+                            ground_truth=ground_truth if ground_truth in ['acceptable', 'unacceptable'] else 'acceptable',
+                            ai_assessment=ai_assessment if ai_assessment in ['pass', 'fail'] else 'pass',
+                            agreement=agreement,
+                            labeler=data.get('labeler', 'user'),
+                            description=data.get('description', ''),
+                            author=data.get('author', ''),
+                            model_score=data.get('model_score', '')
+                        )
+                        tests.append(test_response)
                     
-                    agreement = (
-                        (ai_assessment == 'pass' and ground_truth == 'acceptable') or
-                        (ai_assessment == 'fail' and ground_truth == 'unacceptable')
-                    )
-                    
-                    test_response = TestResponse(
-                        id=doc.id,
+                    return TopicTestsResponse(
                         topic=topic,
-                        statement=data.get('statement', ''),
-                        ground_truth=ground_truth if ground_truth in ['acceptable', 'unacceptable'] else 'acceptable',
-                        ai_assessment=ai_assessment if ai_assessment in ['pass', 'fail'] else 'pass',
-                        agreement=agreement,
-                        labeler=data.get('labeler', 'user'),
-                        description=data.get('description', ''),
-                        author=data.get('author', ''),
-                        model_score=data.get('model_score', '')
+                        total_tests=len(tests),
+                        tests=tests
                     )
-                    tests.append(test_response)
-                
-                return TopicTestsResponse(
-                    topic=topic,
-                    total_tests=len(tests),
-                    tests=tests
-                )
-        except Exception as e:
-            print(f"Error fetching from Firestore: {e}")
-            # Fall through to CSV reading
+            except Exception as e:
+                print(f"Error fetching from Firestore: {e}")
+        
+        raise FileNotFoundError(f"User-created topic '{topic}' not found in Firestore")
     
-    # Fall back to CSV files (built-in topics)
+    # Process CSV file for built-in topics
     csv_path = os.path.join(os.getcwd(), "data", f"NTX_{topic}.csv")
-    
-    if not os.path.exists(csv_path):
-        raise FileNotFoundError(f"Topic '{topic}' not found in CSV files or Firestore")
     
     tests = []
     
@@ -156,20 +168,19 @@ def get_tests_by_topic(topic: str, user_id: str = None) -> TopicTestsResponse:
 
 def get_available_topics(user_id: str = None) -> Dict[str, List[str]]:
     """
-    Get list of available topics from both CSV files and Firestore
+    Get list of available topics from both DEFAULT_TOPICS and Firestore
     Returns dict with 'builtin' and 'user_created' topic lists
     """
     builtin_topics = []
     user_created_topics = []
     
-    # Get built-in topics from CSV files
-    data_dir = os.path.join(os.getcwd(), "data")
-    if os.path.exists(data_dir):
-        for filename in os.listdir(data_dir):
-            if filename.startswith("NTX_") and filename.endswith(".csv"):
-                # Extract topic name from filename (e.g., "NTX_CU0.csv" -> "CU0")
-                topic = filename[4:-4]  # Remove "NTX_" prefix and ".csv" suffix
-                builtin_topics.append(topic)
+    # Get built-in topics from DEFAULT_TOPICS (only topics with prompts)
+    try:
+        from app.services.views_service import DEFAULT_TOPICS
+        builtin_topics = list(DEFAULT_TOPICS.keys())
+    except ImportError:
+        # Fallback to hardcoded list if import fails
+        builtin_topics = ["CU0", "CU5", "Food"]
     
     # Get user-created topics from Firestore
     if user_id and FIREBASE_AVAILABLE:
@@ -179,7 +190,10 @@ def get_available_topics(user_id: str = None) -> Dict[str, List[str]]:
             topic_docs = topics_ref.stream()
             
             for doc in topic_docs:
-                user_created_topics.append(doc.id)
+                topic_name = doc.id
+                # Only include user-created topics (not the default ones)
+                if topic_name not in builtin_topics:
+                    user_created_topics.append(topic_name)
         except Exception as e:
             print(f"Error fetching user topics from Firestore: {e}")
     

@@ -22,18 +22,21 @@ import type { Topic } from "@/hooks/use-topics"
 
 export function NavDocuments({
   topics,
-  onTopicSelect
+  onTopicSelect,
+  selectedTopic
 }: {
   topics: Topic[]
   onTopicSelect?: (topic: string) => void
+  selectedTopic?: string | null
 }) {
   const { isMobile } = useSidebar()
 
   const renderItem = (topic: Topic) => {
     const Icon = topic.icon || IconDatabase
+    const isSelected = selectedTopic === topic.name
     return (
       <SidebarMenuItem key={topic.name}>
-        <SidebarMenuButton asChild>
+        <SidebarMenuButton asChild isActive={isSelected}>
           <button
             onClick={() => onTopicSelect?.(topic.name)}
             className="flex items-center gap-2 w-full text-left justify-between"
@@ -42,9 +45,9 @@ export function NavDocuments({
               <Icon />
               <span>{topic.name}</span>
             </div>
-            {!topic.isBuiltin && (
+            {topic.isBuiltin && (
               <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
-                Custom
+                Default
               </Badge>
             )}
           </button>

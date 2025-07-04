@@ -11,7 +11,7 @@ import { toast } from "sonner"
 
 type AddTopicFormProps = {
   onClose: () => void
-  onSuccess: () => void
+  onSuccess: (topicName: string) => void
 }
 
 export function AddTopicForm({ onClose, onSuccess }: AddTopicFormProps) {
@@ -84,7 +84,7 @@ export function AddTopicForm({ onClose, onSuccess }: AddTopicFormProps) {
     try {
       await createTopic(topicData)
       toast.success(`Topic "${_name}" created successfully!`)
-      onSuccess()
+      onSuccess(_name)
       onClose()
     } catch (error) {
       console.error(error)

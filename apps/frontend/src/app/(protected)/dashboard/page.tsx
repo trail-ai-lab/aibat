@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { DataTable } from "@/components/data-table"
 import { SiteHeader } from "@/components/site-header"
@@ -19,24 +19,49 @@ import { useTests } from "@/hooks/use-tests"
 import { useTopics } from "@/hooks/use-topics"
 import { Badge } from "@/components/ui/badge"
 import { IconLoader, IconDatabase } from "@tabler/icons-react"
+import { fetchTopicPrompt } from "@/lib/api/topics"
 
 export default function Page() {
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null)
   const [isCreateTopicOpen, setIsCreateTopicOpen] = useState(false)
+  const [topicPrompt, setTopicPrompt] = useState<string | null>(null)
+  const [promptLoading, setPromptLoading] = useState(false)
+  const [pendingTopicSelection, setPendingTopicSelection] = useState<string | null>(null)
   const { tests, loading, error, currentTopic, totalTests, fetchTests } = useTests()
-  const { refreshTopics } = useTopics()
+  const { topics, refreshTopics } = useTopics()
 
-  const handleTopicSelect = (topic: string) => {
+  // Auto-select newly created topic when topics list updates
+  useEffect(() => {
+    if (pendingTopicSelection && topics.some(topic => topic.name === pendingTopicSelection)) {
+      handleTopicSelect(pendingTopicSelection)
+      setPendingTopicSelection(null)
+    }
+  }, [topics, pendingTopicSelection])
+
+  const handleTopicSelect = async (topic: string) => {
     setSelectedTopic(topic)
     fetchTests(topic)
+    
+    // Fetch topic prompt
+    setPromptLoading(true)
+    try {
+      const prompt = await fetchTopicPrompt(topic)
+      setTopicPrompt(prompt)
+    } catch (error) {
+      console.error("Error fetching topic prompt:", error)
+      setTopicPrompt(null)
+    } finally {
+      setPromptLoading(false)
+    }
   }
 
   const handleCreateTopic = () => {
     setIsCreateTopicOpen(true)
   }
 
-  const handleTopicCreated = () => {
-    refreshTopics() // Refresh the topics list
+  const handleTopicCreated = async (topicName: string) => {
+    setPendingTopicSelection(topicName) // Mark topic for auto-selection
+    await refreshTopics() // Refresh the topics list
   }
 
   // Transform tests data to match the data table schema
@@ -66,6 +91,7 @@ export default function Page() {
         variant="inset"
         onTopicSelect={handleTopicSelect}
         onCreateTopic={handleCreateTopic}
+        selectedTopic={currentTopic}
       />
       <SidebarInset>
         <SiteHeader />
@@ -86,6 +112,22 @@ export default function Page() {
                         : "Choose a topic from the sidebar to view test statements"
                       }
                     </p>
+                    {/* Topic Prompt */}
+                    {currentTopic && (
+                      <div className="mt-3">
+                        {promptLoading ? (
+                          <div className="flex items-center gap-2">
+                            <IconLoader className="size-4 animate-spin" />
+                            <span className="text-sm text-muted-foreground">Loading prompt...</span>
+                          </div>
+                        ) : topicPrompt ? (
+                          <div className="bg-muted/50 rounded-lg p-3 border-l-4 border-primary">
+                            <p className="text-sm font-medium text-foreground mb-1">Topic Prompt:</p>
+                            <p className="text-sm text-muted-foreground leading-relaxed">{topicPrompt}</p>
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
                   </div>
                 </div>
                 {currentTopic && (
