@@ -37,6 +37,10 @@ import {
   IconX,
 } from "@tabler/icons-react"
 import { ModelSelector } from "@/components/model-selector"
+import { ChartPieLabel } from "@/components/char-area-interactive"
+import { ChartTooltipDefault } from "@/components/chart-tooltip-default"
+
+
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -446,12 +450,12 @@ export function DataTable({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="outline">Outline</SelectItem>
-            <SelectItem value="past-performance">Evaluations</SelectItem>
+            <SelectItem value="evaluations">Evaluations</SelectItem>
           </SelectContent>
         </Select>
         <TabsList className="**:data-[slot=badge]:bg-muted-foreground/30 hidden **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 @4xl/main:flex">
           <TabsTrigger value="outline">Assessments</TabsTrigger>
-          <TabsTrigger value="past-performance">
+          <TabsTrigger value="evaluations">
             Evaluations
           </TabsTrigger>
         </TabsList>
@@ -597,10 +601,15 @@ export function DataTable({
         </div>
       </TabsContent>
       <TabsContent
-        value="past-performance"
+        value="evaluations"
         className="flex flex-col px-4 lg:px-6"
       >
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
+        <div className="grid auto-rows-min gap-4 md:grid-cols-3">
+            <ChartPieLabel/>
+        <ChartTooltipDefault/>
+        <ChartTooltipDefault/>
+          </div>
+        {/* <EvaluationsChart data={data} currentTopic={currentTopic} /> */}
       </TabsContent>
     </Tabs>
   )
