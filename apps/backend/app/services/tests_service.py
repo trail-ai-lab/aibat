@@ -6,6 +6,11 @@ from datetime import datetime
 from typing import List, Optional, Dict
 from app.utils.logs import log_test
 from app.models.schemas import TestSample, TestResponse, TopicTestsResponse
+from app.services.assessment_cache_service import (
+    get_cached_assessments_for_topic,
+    cache_multiple_assessments,
+    get_cached_assessment
+)
 
 # Optional imports for Firebase-dependent functionality
 FIREBASE_AVAILABLE = False
@@ -202,7 +207,7 @@ def get_tests_by_topic_fast(topic: str, user_id: str = None) -> TopicTestsRespon
 def get_tests_by_topic(topic: str, user_id: str = None) -> TopicTestsResponse:
     """
     Get all tests for a specific topic from CSV files or Firestore
-    LEGACY VERSION - includes AI grading (slow)
+    WITH CACHING - checks cache first, then performs AI grading if needed
     """
     # Check if this is a built-in topic (has a prompt in DEFAULT_TOPICS)
     try:
@@ -210,6 +215,19 @@ def get_tests_by_topic(topic: str, user_id: str = None) -> TopicTestsResponse:
         is_builtin_topic = topic in DEFAULT_TOPICS
     except ImportError:
         is_builtin_topic = topic in ["CU0", "CU5", "Food"]
+    
+    # Get current model ID for caching
+    current_model_id = "groq-llama3"  # Default
+    if user_id and FIREBASE_AVAILABLE:
+        try:
+            from app.core.firebase_client import db
+            user_config_ref = db.collection("users").document(user_id).collection("config").document("model")
+            doc = user_config_ref.get()
+            if doc.exists:
+                data = doc.to_dict()
+                current_model_id = data.get("id", "groq-llama3")
+        except Exception as e:
+            print(f"Error getting current model: {e}")
     
     if is_builtin_topic:
         # For built-in topics, always use CSV files
@@ -229,6 +247,9 @@ def get_tests_by_topic(topic: str, user_id: str = None) -> TopicTestsResponse:
                     topic_data = topic_doc.to_dict()
                     topic_prompt = topic_data.get('prompt', '')
                     
+                    # Get cached assessments for this topic and model
+                    cached_assessments = get_cached_assessments_for_topic(user_id, topic, current_model_id)
+                    
                     # Get the model pipeline for grading
                     model_pipeline = None
                     try:
@@ -241,30 +262,48 @@ def get_tests_by_topic(topic: str, user_id: str = None) -> TopicTestsResponse:
                     test_docs = tests_ref.stream()
                     
                     tests = []
+                    assessments_to_cache = []
+                    
                     for doc in test_docs:
                         data = doc.to_dict()
                         statement = data.get('statement', '')
                         ground_truth = data.get('ground_truth', 'acceptable').lower()
+                        test_id = doc.id
                         
-                        # Generate AI assessment using the actual model pipeline
-                        ai_assessment_raw = "grading"  # Default to grading status
-                        if model_pipeline and topic_prompt:
-                            try:
-                                # Call the actual grading function
-                                grade_result = model_pipeline.grade(statement, topic_prompt)
-                                # Convert acceptable/unacceptable to pass/fail
-                                ai_assessment_raw = "pass" if grade_result == "acceptable" else "fail"
-                            except Exception as e:
-                                print(f"Error grading statement: {e}")
+                        # Check cache first
+                        ai_assessment_raw = cached_assessments.get(test_id)
+                        
+                        if ai_assessment_raw:
+                            # Use cached assessment
+                            print(f"Using cached assessment for test {test_id}: {ai_assessment_raw}")
+                        else:
+                            # Generate AI assessment using the actual model pipeline
+                            ai_assessment_raw = "grading"  # Default to grading status
+                            if model_pipeline and topic_prompt:
+                                try:
+                                    # Call the actual grading function
+                                    grade_result = model_pipeline.grade(statement, topic_prompt)
+                                    # Convert acceptable/unacceptable to pass/fail
+                                    ai_assessment_raw = "pass" if grade_result == "acceptable" else "fail"
+                                    
+                                    # Add to cache list
+                                    assessments_to_cache.append({
+                                        "test_id": test_id,
+                                        "statement": statement,
+                                        "ai_assessment": ai_assessment_raw
+                                    })
+                                    print(f"Generated new assessment for test {test_id}: {ai_assessment_raw}")
+                                except Exception as e:
+                                    print(f"Error grading statement: {e}")
+                                    # Use stored data as fallback
+                                    ai_assessment_raw = data.get('ai_assessment', 'pass').lower()
+                                    if ai_assessment_raw not in ['pass', 'fail']:
+                                        ai_assessment_raw = "grading"
+                            else:
                                 # Use stored data as fallback
                                 ai_assessment_raw = data.get('ai_assessment', 'pass').lower()
                                 if ai_assessment_raw not in ['pass', 'fail']:
                                     ai_assessment_raw = "grading"
-                        else:
-                            # Use stored data as fallback
-                            ai_assessment_raw = data.get('ai_assessment', 'pass').lower()
-                            if ai_assessment_raw not in ['pass', 'fail']:
-                                ai_assessment_raw = "grading"
                         
                         # Agreement logic: only calculate if both AI and user assessments are available
                         # For user-created topics, compare AI assessment with user's ground truth
@@ -277,7 +316,7 @@ def get_tests_by_topic(topic: str, user_id: str = None) -> TopicTestsResponse:
                             )
                         
                         test_response = TestResponse(
-                            id=doc.id,
+                            id=test_id,
                             topic=topic,
                             statement=statement,
                             ground_truth=ground_truth if ground_truth in ['acceptable', 'unacceptable'] else 'acceptable',
@@ -292,6 +331,11 @@ def get_tests_by_topic(topic: str, user_id: str = None) -> TopicTestsResponse:
                         )
                         tests.append(test_response)
                     
+                    # Cache new assessments
+                    if assessments_to_cache:
+                        cached_count = cache_multiple_assessments(user_id, topic, current_model_id, assessments_to_cache)
+                        print(f"Cached {cached_count} new assessments for topic {topic} with model {current_model_id}")
+                    
                     return TopicTestsResponse(
                         topic=topic,
                         total_tests=len(tests),
@@ -304,6 +348,11 @@ def get_tests_by_topic(topic: str, user_id: str = None) -> TopicTestsResponse:
     
     # Process CSV file for built-in topics
     csv_path = os.path.join(os.getcwd(), "data", f"NTX_{topic}.csv")
+    
+    # Get cached assessments for this topic and model
+    cached_assessments = {}
+    if user_id:
+        cached_assessments = get_cached_assessments_for_topic(user_id, topic, current_model_id)
     
     # Get user assessment overrides if available
     user_assessments = {}
@@ -336,6 +385,7 @@ def get_tests_by_topic(topic: str, user_id: str = None) -> TopicTestsResponse:
             print(f"Error getting model pipeline: {e}")
     
     tests = []
+    assessments_to_cache = []
     
     try:
         with open(csv_path, 'r', newline='', encoding='utf-8') as file:
@@ -350,25 +400,40 @@ def get_tests_by_topic(topic: str, user_id: str = None) -> TopicTestsResponse:
                 statement = row.get('input', '')
                 ground_truth = row.get('output', '').lower()
                 
-                # Generate AI assessment using the actual model pipeline
-                ai_assessment_raw = "grading"  # Default to grading status
-                if model_pipeline and topic_prompt:
-                    try:
-                        # Call the actual grading function
-                        grade_result = model_pipeline.grade(statement, topic_prompt)
-                        # Convert acceptable/unacceptable to pass/fail
-                        ai_assessment_raw = "pass" if grade_result == "acceptable" else "fail"
-                    except Exception as e:
-                        print(f"Error grading statement: {e}")
+                # Check cache first
+                ai_assessment_raw = cached_assessments.get(test_id)
+                
+                if ai_assessment_raw:
+                    # Use cached assessment
+                    print(f"Using cached assessment for test {test_id}: {ai_assessment_raw}")
+                else:
+                    # Generate AI assessment using the actual model pipeline
+                    ai_assessment_raw = "grading"  # Default to grading status
+                    if model_pipeline and topic_prompt:
+                        try:
+                            # Call the actual grading function
+                            grade_result = model_pipeline.grade(statement, topic_prompt)
+                            # Convert acceptable/unacceptable to pass/fail
+                            ai_assessment_raw = "pass" if grade_result == "acceptable" else "fail"
+                            
+                            # Add to cache list
+                            assessments_to_cache.append({
+                                "test_id": test_id,
+                                "statement": statement,
+                                "ai_assessment": ai_assessment_raw
+                            })
+                            print(f"Generated new assessment for test {test_id}: {ai_assessment_raw}")
+                        except Exception as e:
+                            print(f"Error grading statement: {e}")
+                            # Use the original CSV data as fallback
+                            ai_assessment_raw = row.get('label', 'pass').lower()
+                            if ai_assessment_raw not in ['pass', 'fail']:
+                                ai_assessment_raw = "grading"
+                    else:
                         # Use the original CSV data as fallback
                         ai_assessment_raw = row.get('label', 'pass').lower()
                         if ai_assessment_raw not in ['pass', 'fail']:
                             ai_assessment_raw = "grading"
-                else:
-                    # Use the original CSV data as fallback
-                    ai_assessment_raw = row.get('label', 'pass').lower()
-                    if ai_assessment_raw not in ['pass', 'fail']:
-                        ai_assessment_raw = "grading"
                 
                 # Check if user has overridden the assessment
                 your_assessment = user_assessments.get(test_id, "ungraded")
@@ -401,6 +466,11 @@ def get_tests_by_topic(topic: str, user_id: str = None) -> TopicTestsResponse:
     
     except Exception as e:
         raise Exception(f"Error reading CSV file for topic '{topic}': {str(e)}")
+    
+    # Cache new assessments
+    if assessments_to_cache and user_id:
+        cached_count = cache_multiple_assessments(user_id, topic, current_model_id, assessments_to_cache)
+        print(f"Cached {cached_count} new assessments for topic {topic} with model {current_model_id}")
     
     return TopicTestsResponse(
         topic=topic,
@@ -446,7 +516,7 @@ def get_available_topics(user_id: str = None) -> Dict[str, List[str]]:
 
 def create_topic(user_id: str, topic_data: dict) -> dict:
     """
-    Create a new topic with tests in Firestore
+    Create a new topic with tests in Firestore and cache AI assessments
     """
     if not FIREBASE_AVAILABLE:
         raise Exception("Firebase not available")
@@ -458,6 +528,17 @@ def create_topic(user_id: str, topic_data: dict) -> dict:
         topic_name = topic_data["topic"]
         prompt = topic_data["prompt_topic"]
         tests = topic_data["tests"]
+        
+        # Get current model ID for caching
+        current_model_id = "groq-llama3"  # Default
+        try:
+            user_config_ref = db.collection("users").document(user_id).collection("config").document("model")
+            doc = user_config_ref.get()
+            if doc.exists:
+                data = doc.to_dict()
+                current_model_id = data.get("id", "groq-llama3")
+        except Exception as e:
+            print(f"Error getting current model: {e}")
         
         # Save topic metadata in Firestore
         topic_ref = db.collection("users").document(user_id).collection("topics").document(topic_name)
@@ -474,8 +555,9 @@ def create_topic(user_id: str, topic_data: dict) -> dict:
         except Exception as e:
             print(f"Error getting model pipeline: {e}")
         
-        # Save tests in Firestore
+        # Save tests in Firestore and prepare for caching
         tests_ref = db.collection("users").document(user_id).collection("tests")
+        assessments_to_cache = []
         
         for test in tests:
             statement = test["test"]
@@ -504,6 +586,18 @@ def create_topic(user_id: str, topic_data: dict) -> dict:
                 "model_score": "",
                 "created_at": datetime.utcnow()
             })
+            
+            # Add to cache list
+            assessments_to_cache.append({
+                "test_id": test_doc.id,
+                "statement": statement,
+                "ai_assessment": ai_assessment
+            })
+        
+        # Cache all assessments for this topic and model
+        if assessments_to_cache:
+            cached_count = cache_multiple_assessments(user_id, topic_name, current_model_id, assessments_to_cache)
+            print(f"Cached {cached_count} assessments for new topic {topic_name} with model {current_model_id}")
         
         return {"message": "Topic created successfully", "topic": topic_name}
         
@@ -704,3 +798,27 @@ def update_test_assessment_with_agreement(user_id: str, test_id: str, assessment
         
     except Exception as e:
         raise Exception(f"Error updating assessment: {str(e)}")
+
+def clear_topic_cache(user_id: str, topic: str, model_id: str) -> dict:
+    """
+    Clear cached assessments for a specific topic and model combination
+    """
+    try:
+        from app.services.assessment_cache_service import clear_cached_assessments_for_topic_model
+        
+        success = clear_cached_assessments_for_topic_model(user_id, topic, model_id)
+        
+        if success:
+            return {
+                "message": f"Cache cleared for topic '{topic}' and model '{model_id}'",
+                "topic": topic,
+                "model_id": model_id
+            }
+        else:
+            return {
+                "message": "No cache found or failed to clear cache",
+                "topic": topic,
+                "model_id": model_id
+            }
+    except Exception as e:
+        raise Exception(f"Error clearing topic cache: {str(e)}")

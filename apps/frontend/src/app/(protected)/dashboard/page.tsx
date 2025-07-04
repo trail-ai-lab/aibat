@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/drawer"
 import { useTests } from "@/hooks/use-tests"
 import { useTopics } from "@/hooks/use-topics"
+import { useModels } from "@/hooks/use-models"
 import { Badge } from "@/components/ui/badge"
 import { IconLoader, IconDatabase } from "@tabler/icons-react"
 import { fetchTopicPrompt } from "@/lib/api/topics"
@@ -29,7 +30,8 @@ export default function Page() {
   const [topicPrompt, setTopicPrompt] = useState<string | null>(null)
   const [promptLoading, setPromptLoading] = useState(false)
   const [pendingTopicSelection, setPendingTopicSelection] = useState<string | null>(null)
-  const { tests, loading, error, currentTopic, totalTests, fetchTests } = useTests()
+  const { selectedModel } = useModels()
+  const { tests, loading, error, currentTopic, totalTests, fetchTests } = useTests(undefined, selectedModel)
   const { topics, refreshTopics } = useTopics()
 
   // Auto-select newly created topic when topics list updates

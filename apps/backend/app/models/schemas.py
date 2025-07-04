@@ -33,3 +33,15 @@ class TopicTestsResponse(BaseModel):
     topic: str
     total_tests: int
     tests: list[TestResponse]
+
+class CachedAssessment(BaseModel):
+    """Model for cached AI assessments"""
+    id: Optional[str] = None
+    user_id: str
+    topic: str
+    model_id: str
+    test_id: str
+    statement: str
+    ai_assessment: Literal["pass", "fail"]
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None

@@ -100,6 +100,29 @@ export async function updateTestAssessment(testId: string, assessment: "acceptab
   return await res.json()
 }
 
+export async function clearTopicCache(topic: string, modelId: string): Promise<{ message: string }> {
+  const user = getAuth().currentUser
+  if (!user) throw new Error("User not authenticated")
+
+  const token = await user.getIdToken()
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/tests/cache/clear/${encodeURIComponent(topic)}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ model_id: modelId })
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.detail || "Failed to clear cache")
+  }
+
+  return await res.json()
+}
+
 export async function createTopic(topicData: CreateTopicRequest): Promise<{ message: string; topic: string }> {
   const user = getAuth().currentUser
   if (!user) throw new Error("User not authenticated")

@@ -144,3 +144,22 @@ def update_test_assessment(
         return tests_service.update_test_assessment(user["uid"], test_id, assessment_data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/cache/clear/{topic_name}")
+def clear_topic_cache(
+    topic_name: str,
+    cache_data: dict,
+    user=Depends(verify_firebase_token)
+):
+    """
+    Clear cached assessments for a specific topic and model combination
+    """
+    try:
+        model_id = cache_data.get("model_id")
+        if not model_id:
+            raise HTTPException(status_code=400, detail="model_id is required")
+        
+        return tests_service.clear_topic_cache(user["uid"], topic_name, model_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
