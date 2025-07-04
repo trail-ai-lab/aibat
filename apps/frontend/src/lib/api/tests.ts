@@ -36,6 +36,14 @@ export interface CreateTopicRequest {
   }>
 }
 
+export interface AddStatementsRequest {
+  topic: string
+  tests: Array<{
+    test: string
+    ground_truth: "acceptable" | "unacceptable"
+  }>
+}
+
 export async function fetchTestsByTopic(topic: string): Promise<TopicTestsResponse> {
   const user = getAuth().currentUser
   if (!user) throw new Error("User not authenticated")
@@ -141,6 +149,29 @@ export async function createTopic(topicData: CreateTopicRequest): Promise<{ mess
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}))
     throw new Error(errorData.detail || "Failed to create topic")
+  }
+
+  return await res.json()
+}
+
+export async function addStatementsToTopic(statementsData: AddStatementsRequest): Promise<{ message: string; topic: string }> {
+  const user = getAuth().currentUser
+  if (!user) throw new Error("User not authenticated")
+
+  const token = await user.getIdToken()
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/tests/topics/add-statements`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(statementsData)
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.detail || "Failed to add statements to topic")
   }
 
   return await res.json()

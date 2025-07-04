@@ -39,6 +39,7 @@ import {
 import { ModelSelector } from "@/components/model-selector"
 import { ChartPieLabel } from "@/components/char-area-interactive"
 import { ChartTooltipDefault } from "@/components/chart-tooltip-default"
+import { AddStatementsForm } from "@/components/add-statements-form"
 
 
 import {
@@ -364,10 +365,12 @@ export function DataTable({
   data: initialData,
   onAssessmentChange,
   currentTopic,
+  onDataRefresh,
 }: {
   data: z.infer<typeof schema>[]
   onAssessmentChange?: (id: string, assessment: "acceptable" | "unacceptable") => void
   currentTopic?: string
+  onDataRefresh?: () => void
 }) {
   const [data, setData] = React.useState(() => initialData)
   const [rowSelection, setRowSelection] = React.useState({})
@@ -381,6 +384,7 @@ export function DataTable({
     pageIndex: 0,
     pageSize: 10,
   })
+  const [isAddStatementsOpen, setIsAddStatementsOpen] = React.useState(false)
   const sortableId = React.useId()
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
@@ -431,6 +435,12 @@ export function DataTable({
     }
   }
 
+  const handleAddStatementsSuccess = () => {
+    // Refresh the data after successfully adding statements
+    onDataRefresh?.()
+  }
+
+
   return (
     <Tabs
       defaultValue="outline"
@@ -461,10 +471,40 @@ export function DataTable({
         </TabsList>
         <div className="flex items-center gap-2">
           <ModelSelector currentTopic={currentTopic} />
-          <Button variant="outline" size="sm">
-            <IconPlus />
-            <span className="hidden lg:inline">Add Section</span>
-          </Button>
+          <Drawer
+            direction="bottom"
+            open={isAddStatementsOpen}
+            onOpenChange={setIsAddStatementsOpen}
+          >
+            <DrawerTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!currentTopic}
+                title={!currentTopic ? "Select a topic to add statements" : "Add statements to this topic"}
+              >
+                <IconPlus />
+                <span className="hidden lg:inline">Add Statements</span>
+              </Button>
+            </DrawerTrigger>
+            <DrawerContent>
+              <DrawerHeader className="gap-1">
+                <DrawerTitle>Add Statements</DrawerTitle>
+                <DrawerDescription>
+                  Add new test statements to the current topic
+                </DrawerDescription>
+              </DrawerHeader>
+              <div className="flex flex-col gap-4 overflow-y-auto px-4">
+                {currentTopic && (
+                  <AddStatementsForm
+                    topicName={currentTopic}
+                    onClose={() => setIsAddStatementsOpen(false)}
+                    onSuccess={handleAddStatementsSuccess}
+                  />
+                )}
+              </div>
+            </DrawerContent>
+          </Drawer>
         </div>
       </div>
       <TabsContent

@@ -102,6 +102,13 @@ export default function Page() {
     }
   }
 
+  const handleDataRefresh = async () => {
+    // Refresh the tests data after adding new statements
+    if (currentTopic) {
+      await fetchTests(currentTopic)
+    }
+  }
+
   return (
     <SidebarProvider
       style={
@@ -185,6 +192,7 @@ export default function Page() {
                   data={tableData}
                   onAssessmentChange={handleAssessmentChange}
                   currentTopic={currentTopic || undefined}
+                  onDataRefresh={handleDataRefresh}
                 />
               )}
 

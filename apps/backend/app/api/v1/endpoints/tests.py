@@ -74,6 +74,17 @@ def create_topic(topic_data: dict, user=Depends(verify_firebase_token)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/topics/add-statements")
+def add_statements_to_topic(statements_data: dict, user=Depends(verify_firebase_token)):
+    """
+    Add new statements to an existing topic in Firestore
+    """
+    try:
+        return tests_service.add_statements_to_topic(user["uid"], statements_data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/add/")
 def add_test(test: TestInput, user=Depends(verify_firebase_token)):
     success = tests_service.add_test(user["uid"], test)
