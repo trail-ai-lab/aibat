@@ -36,6 +36,7 @@ import {
   IconTrendingUp,
   IconCheck,
   IconX,
+  IconChevronUp,
 } from "@tabler/icons-react"
 import { ModelSelector } from "@/components/model-selector"
 import { ChartPieLabel } from "@/components/char-area-interactive"
@@ -109,6 +110,11 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 
 export const schema = z.object({
   id: z.string(),
@@ -123,6 +129,8 @@ export const schema = z.object({
   author: z.string().optional(),
   model_score: z.string().optional(),
   is_builtin: z.boolean().optional(),
+  parent_id: z.string().optional(),
+  criteria_text: z.string().optional(),
 })
 
 // Create a separate component for the drag handle
@@ -149,7 +157,10 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
   {
     id: "drag",
     header: () => null,
-    cell: ({ row }) => <DragHandle id={row.original.id} />,
+    cell: ({ row }) => {
+      const isChildRow = !!row.original.parent_id;
+      return isChildRow ? null : <DragHandle id={row.original.id} />;
+    },
   },
   {
     id: "select",
@@ -165,15 +176,18 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
         />
       </div>
     ),
-    cell: ({ row }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      </div>
-    ),
+    cell: ({ row }) => {
+      const isChildRow = !!row.original.parent_id;
+      return isChildRow ? null : (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        </div>
+      );
+    },
     enableSorting: false,
     enableHiding: false,
   },
@@ -181,6 +195,14 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
     accessorKey: "statement",
     header: "Statements",
     cell: ({ row }) => {
+      const isChildRow = !!row.original.parent_id;
+      if (isChildRow) {
+        return (
+          <div className="pl-4 text-sm text-muted-foreground">
+            {row.original.statement}
+          </div>
+        );
+      }
       return <TableCellViewer item={row.original} />
     },
     enableHiding: false,
@@ -189,6 +211,7 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
     accessorKey: "ai_assessment",
     header: "AI Assessment",
     cell: ({ row }) => {
+      const isChildRow = !!row.original.parent_id;
       const assessment = row.original.ai_assessment;
       
       if (assessment === "grading") {
@@ -225,6 +248,7 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
     accessorKey: "your_assessment",
     header: "Your Assessment",
     cell: ({ row }) => {
+      const isChildRow = !!row.original.parent_id;
       const assessment = row.original.your_assessment;
       const testId = row.original.id;
       
@@ -234,26 +258,28 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
             <Badge variant="outline" className="px-1.5 text-gray-600 border-gray-200">
               Ungraded
             </Badge>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 hover:bg-green-50 text-green-600"
-                onClick={() => onAssessmentChange?.(testId, "acceptable")}
-                title="Mark as Acceptable"
-              >
-                <IconCheck className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 hover:bg-red-50 text-red-600"
-                onClick={() => onAssessmentChange?.(testId, "unacceptable")}
-                title="Mark as Unacceptable"
-              >
-                <IconX className="h-4 w-4" />
-              </Button>
-            </div>
+            {!isChildRow && (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 hover:bg-green-50 text-green-600"
+                  onClick={() => onAssessmentChange?.(testId, "acceptable")}
+                  title="Mark as Acceptable"
+                >
+                  <IconCheck className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 hover:bg-red-50 text-red-600"
+                  onClick={() => onAssessmentChange?.(testId, "unacceptable")}
+                  title="Mark as Unacceptable"
+                >
+                  <IconX className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
         );
       }
@@ -275,6 +301,7 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
     accessorKey: "agreement",
     header: "Agreement",
     cell: ({ row }) => {
+      const isChildRow = !!row.original.parent_id;
       const agreement = row.original.agreement;
       const aiAssessment = row.original.ai_assessment;
       const yourAssessment = row.original.your_assessment;
@@ -311,35 +338,73 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
       );
     },
   },
+  {
+    accessorKey: "criteria",
+    header: "Criteria",
+    cell: ({ row, table }) => {
+      const isChildRow = !!row.original.parent_id;
+      const expandedRows = (table.options.meta as any)?.expandedRows || new Set();
+      const isExpanded = expandedRows.has(row.original.id);
+      const toggleExpanded = (table.options.meta as any)?.toggleExpanded;
+      
+      if (isChildRow) {
+        return (
+          <div className="pl-4 text-sm text-muted-foreground">
+            {row.original.criteria_text || "Criteria"}
+          </div>
+        );
+      }
+      
+      return (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 w-6 p-0"
+          onClick={() => toggleExpanded?.(row.original.id)}
+        >
+          {isExpanded ? (
+            <IconChevronUp className="h-4 w-4" />
+          ) : (
+            <IconChevronDown className="h-4 w-4" />
+          )}
+        </Button>
+      );
+    },
+  },
     {
     id: "actions",
-    cell: () => (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
-            size="icon"
-          >
-            <IconDotsVertical />
-            <span className="sr-only">Open menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-32">
-          <DropdownMenuItem>Edit</DropdownMenuItem>
-          <DropdownMenuItem>Make a copy</DropdownMenuItem>
-          <DropdownMenuItem>Favorite</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    ),
+    cell: ({ row }) => {
+      const isChildRow = !!row.original.parent_id;
+      return isChildRow ? null : (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
+              size="icon"
+            >
+              <IconDotsVertical />
+              <span className="sr-only">Open menu</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-32">
+            <DropdownMenuItem>Edit</DropdownMenuItem>
+            <DropdownMenuItem>Make a copy</DropdownMenuItem>
+            <DropdownMenuItem>Favorite</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    },
   },
 ]
 
 function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
+  const isChildRow = !!row.original.parent_id
   const { transform, transition, setNodeRef, isDragging } = useSortable({
     id: row.original.id,
+    disabled: isChildRow, // Disable dragging for child rows
   })
 
   return (
@@ -347,7 +412,9 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
       data-state={row.getIsSelected() && "selected"}
       data-dragging={isDragging}
       ref={setNodeRef}
-      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
+      className={`relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80 ${
+        isChildRow ? 'bg-muted/30' : ''
+      }`}
       style={{
         transform: CSS.Transform.toString(transform),
         transition: transition,
@@ -355,7 +422,7 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
       }}
     >
       {row.getVisibleCells().map((cell) => (
-        <TableCell key={cell.id}>
+        <TableCell key={cell.id} className={isChildRow ? 'border-l-2 border-l-muted-foreground/20' : ''}>
           {flexRender(cell.column.columnDef.cell, cell.getContext())}
         </TableCell>
       ))}
@@ -374,6 +441,7 @@ export function DataTable({
   currentTopic?: string
   onDataRefresh?: () => void
 }) {
+  const [expandedRows, setExpandedRows] = React.useState<Set<string>>(new Set())
   const [data, setData] = React.useState(() => initialData)
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
@@ -395,15 +463,59 @@ export function DataTable({
     useSensor(KeyboardSensor, {})
   )
 
+  const toggleExpanded = React.useCallback((rowId: string) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(rowId)) {
+        newSet.delete(rowId)
+      } else {
+        newSet.add(rowId)
+      }
+      return newSet
+    })
+  }, [])
+
+  // Generate child rows for expanded parent rows
+  const generateChildRows = React.useCallback((parentRow: z.infer<typeof schema>) => {
+    const childRows: z.infer<typeof schema>[] = []
+    for (let i = 1; i <= 5; i++) {
+      childRows.push({
+        ...parentRow,
+        id: `${parentRow.id}-child-${i}`,
+        parent_id: parentRow.id,
+        criteria_text: `Criteria ${i}`,
+      })
+    }
+    return childRows
+  }, [])
+
+  // Expand data with child rows
+  const expandedData = React.useMemo(() => {
+    const result: z.infer<typeof schema>[] = []
+    
+    data.forEach(row => {
+      // Add parent row
+      result.push(row)
+      
+      // Add child rows if expanded
+      if (expandedRows.has(row.id)) {
+        const childRows = generateChildRows(row)
+        result.push(...childRows)
+      }
+    })
+    
+    return result
+  }, [data, expandedRows, generateChildRows])
+
   const columns = React.useMemo(() => createColumns(onAssessmentChange), [onAssessmentChange])
 
   const dataIds = React.useMemo<UniqueIdentifier[]>(
-    () => data?.map(({ id }) => id) || [],
-    [data]
+    () => expandedData?.map(({ id }) => id) || [],
+    [expandedData]
   )
 
   const table = useReactTable({
-    data,
+    data: expandedData,
     columns,
     state: {
       sorting,
@@ -425,14 +537,26 @@ export function DataTable({
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
+    meta: {
+      expandedRows,
+      toggleExpanded,
+    },
   })
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     if (active && over && active.id !== over.id) {
+      // Only allow dragging of parent rows (not child rows)
+      const activeRow = expandedData.find(row => row.id === active.id)
+      const overRow = expandedData.find(row => row.id === over.id)
+      
+      if (activeRow?.parent_id || overRow?.parent_id) {
+        return // Don't allow dragging child rows or dropping on child rows
+      }
+      
       setData((data) => {
-        const oldIndex = dataIds.indexOf(active.id)
-        const newIndex = dataIds.indexOf(over.id)
+        const oldIndex = data.findIndex(row => row.id === active.id)
+        const newIndex = data.findIndex(row => row.id === over.id)
         return arrayMove(data, oldIndex, newIndex)
       })
     }
