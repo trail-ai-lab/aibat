@@ -18,6 +18,7 @@ import {
 import { useTests } from "@/hooks/use-tests"
 import { useTopics } from "@/hooks/use-topics"
 import { useModels } from "@/hooks/use-models"
+import { usePerturbations } from "@/hooks/use-perturbations"
 import { Badge } from "@/components/ui/badge"
 import { IconLoader, IconDatabase } from "@tabler/icons-react"
 import { fetchTopicPrompt } from "@/lib/api/topics"
@@ -33,6 +34,7 @@ export default function Page() {
   const { selectedModel } = useModels()
   const { tests, loading, error, currentTopic, totalTests, fetchTests } = useTests(undefined, selectedModel)
   const { topics, refreshTopics } = useTopics()
+  const { perturbations, loading: perturbationsLoading, addPerturbations } = usePerturbations(currentTopic || undefined)
 
   // Auto-select newly created topic when topics list updates
   useEffect(() => {
@@ -193,6 +195,8 @@ export default function Page() {
                   onAssessmentChange={handleAssessmentChange}
                   currentTopic={currentTopic || undefined}
                   onDataRefresh={handleDataRefresh}
+                  cachedPerturbations={perturbations}
+                  onPerturbationsUpdate={addPerturbations}
                 />
               )}
 

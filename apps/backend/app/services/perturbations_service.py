@@ -1,158 +1,158 @@
-# app/services/perturbations_service.py
-
-from app.utils.logs import log_action
-from app.utils.model_selector import get_model_pipeline
-from app.utils.user_session import get_user_session_data
-from app.core.firebase_client import db as _db
 from uuid import uuid4
+from app.utils.logs import log_test
 
-# Store custom perturbation types in memory (can be moved to Firestore if needed)
-custom_pert_types = {}
+# Optional imports for Firebase-dependent functionality
+FIREBASE_AVAILABLE = False
+_db = None
+get_model_pipeline = None
+get_user_criteria = None
+get_tests_by_topic_fast = None
+DEFAULT_CRITERIA_CONFIGS = {}
 
-# Static default types for demo
-DEFAULT_PERTURBATION_TYPES = {
-    "AIBAT": ["spelling", "negation", "synonyms", "paraphrase", "acronyms", "antonyms", "spanish"],
-    "Mini-AIBAT": ["spelling", "synonyms", "paraphrase", "acronyms", "spanish"],
-    "M-AIBAT": ["spanish", "spanglish", "english", "nouns", "spelling", "cognates", "dialect", "loan_word"]
-}
-
-def generate_perturbations(uid: str, topic: str, tests: list):
-    pipeline = get_model_pipeline(uid)
-    results = []
-
-    for test in tests:
-        original = test.title
-        perturbed_text = pipeline.perturb(original)
-        label = pipeline.grade(perturbed_text, topic)
-
-        pert_id = uuid4().hex
-        perturbation = {
-            "id": pert_id,
-            "original_id": test.id,
-            "title": perturbed_text,
-            "label": label,
-            "topic": topic,
-            "ground_truth": test.ground_truth,
-            "validity": "approved" if label == test.ground_truth else "denied"
-        }
-
-        _db.collection("users").document(uid).collection("perturbations").document(pert_id).set(perturbation)
-        log_action(uid, "generate_perturbation", perturbation)
-        results.append(perturbation)
-
-    return {"perturbations": results}
+try:
+    from app.core.firebase_client import db as _db
+    from app.utils.model_selector import get_model_pipeline
+    from app.services.criteria_service import get_user_criteria
+    from app.services.tests_service import get_tests_by_topic_fast
+    from app.core.criteria_config import (
+        DEFAULT_CRITERIA_CONFIGS,
+        get_criteria_prompt,
+        should_flip_label
+    )
+    FIREBASE_AVAILABLE = True
+except ImportError:
+    pass
 
 
-def get_perturbations(uid: str):
-    docs = _db.collection("users").document(uid).collection("perturbations").stream()
-    return [doc.to_dict() for doc in docs]
+def log_action(user_id: str, action: str, data: dict):
+    log_entry = {
+        "action": action,
+        "data": data
+    }
+    log_test(user_id, log_entry)
 
 
-def edit_perturbation(uid: str, body):
-    doc_ref = _db.collection("users").document(uid).collection("perturbations").document(body.id)
-    doc = doc_ref.get()
-    if not doc.exists:
-        raise ValueError("Perturbation not found")
+def generate_perturbations(uid: str, topic: str, test_ids: list, batch_size: int = 5):
+    if not FIREBASE_AVAILABLE:
+        raise Exception("Firebase dependencies not available")
 
-    updated = doc.to_dict()
-    updated["title"] = body.title
-    updated["label"] = get_model_pipeline(uid).grade(body.title, body.topic)
-    updated["validity"] = "unapproved"
+    try:
+        # Load tests
+        topic_tests = get_tests_by_topic_fast(topic, uid)
+        test_lookup = {test.id: test for test in topic_tests.tests}
 
-    doc_ref.set(updated)
-    log_action(uid, "edit_perturbation", updated)
-    return updated
+        # Load user-specific criteria
+        user_criteria_doc = _db.collection("users").document(uid).collection("topics").document(topic).collection("config").document("criteria").get()
+        if user_criteria_doc.exists:
+            criteria_data = user_criteria_doc.to_dict()
+            criteria_types = criteria_data.get("types", [])
+        else:
+            print(f"No user criteria found for topic '{topic}', using AIBAT fallback")
+            criteria_types = [
+                {
+                    "name": name,
+                    "prompt": get_criteria_prompt(name, for_generation=False),
+                    "isDefault": True
+                }
+                for name in DEFAULT_CRITERIA_CONFIGS.get("AIBAT", [])
+            ]
 
+        pipeline = get_model_pipeline(uid)
+        results = []
 
-def validate_perturbations(uid: str, body):
-    updated = []
-    for pert_id in body.ids:
-        doc_ref = _db.collection("users").document(uid).collection("perturbations").document(pert_id)
-        doc = doc_ref.get()
-        if not doc.exists:
-            continue
+        # Build list of (test, criteria) pairs
+        task_list = []
+        for test_id in test_ids:
+            if test_id not in test_lookup:
+                continue
+            test = test_lookup[test_id]
+            for criteria in criteria_types:
+                task_list.append((test, criteria))
 
-        pert = doc.to_dict()
-        if body.validation == "approved":
-            pert["ground_truth"] = pert["label"]
-        elif body.validation == "denied":
-            pert["ground_truth"] = "acceptable" if pert["label"] == "unacceptable" else "unacceptable"
+        # Process in batches
+        for i in range(0, len(task_list), batch_size):
+            batch = task_list[i:i + batch_size]
 
-        pert["validity"] = body.validation
-        doc_ref.set(pert)
-        log_action(uid, "validate_perturbation", pert)
-        updated.append(pert)
+            # 1. Generate perturbations
+            pert_prompts = [f"{criteria['prompt']}: {test.statement}" for test, criteria in batch]
+            perturbed_texts = [pipeline.custom_perturb(p) for p in pert_prompts]
 
-    return {"validated": updated}
+            # 2. Grade perturbations
+            graded_labels = [pipeline.grade(perturbed, topic) for perturbed in perturbed_texts]
 
+            # 3. Record results
+            for (test, criteria), perturbed_text, label_result in zip(batch, perturbed_texts, graded_labels):
+                name = criteria["name"]
+                is_default = criteria.get("isDefault", False)
+                ai_assessment = "pass" if label_result == "acceptable" else "fail"
 
-def delete_perturbation_type(uid: str, pert_type: str):
-    col_ref = _db.collection("users").document(uid).collection("perturbations")
-    docs = col_ref.where("type", "==", pert_type).stream()
-    for doc in docs:
-        doc.reference.delete()
-        log_action(uid, "delete_perturbation", doc.to_dict())
+                # Use user's current assessment instead of original ground_truth
+                # This is the key fix - use your_assessment from the test object
+                user_assessment = test.your_assessment
+                if user_assessment == "ungraded":
+                    # If user hasn't assessed yet, fall back to original ground_truth
+                    expected_gt = test.ground_truth
+                else:
+                    # Use user's assessment as the base for perturbation ground truth
+                    expected_gt = user_assessment
+                
+                # Apply flip logic for criteria that change meaning (negation, antonyms)
+                if should_flip_label(name):
+                    expected_gt = "unacceptable" if expected_gt == "acceptable" else "acceptable"
 
-    return {"deleted_type": pert_type}
+                validity = "approved" if (
+                    (ai_assessment == "pass" and expected_gt == "acceptable") or
+                    (ai_assessment == "fail" and expected_gt == "unacceptable")
+                ) else "denied"
 
+                # Create a deterministic ID based on original_id and type to avoid duplicates
+                # This ensures each test+criteria combination has only one perturbation
+                pert_id = f"{test.id}_{name}".replace(" ", "_").replace("-", "_").lower()
+                
+                perturbation = {
+                    "id": pert_id,
+                    "original_id": test.id,
+                    "title": perturbed_text,
+                    "label": ai_assessment,
+                    "type": name,
+                    "topic": topic,
+                    "ground_truth": expected_gt,
+                    "validity": validity
+                }
 
-def add_custom_perturbation_type(uid: str, pert_name: str, prompt: str, flip_label: bool, test_list: list):
-    if pert_name in custom_pert_types.get(uid, {}):
-        raise ValueError("Perturbation type already exists")
+                # Use set() to upsert - this will overwrite if the document already exists
+                _db.collection("users").document(uid).collection("perturbations").document(pert_id).set(perturbation)
+                log_action(uid, "generate_perturbation", perturbation)
+                results.append(perturbation)
 
-    # Store prompt and label rule
-    if uid not in custom_pert_types:
-        custom_pert_types[uid] = {}
-    custom_pert_types[uid][pert_name] = {"prompt": prompt, "flip_label": flip_label}
+        return {"message": f"Generated {len(results)} perturbations", "perturbations": results}
 
-    pipeline = get_model_pipeline(uid)
-    results = []
-
-    for test in test_list:
-        perturbed_text = pipeline.custom_perturb(f"{prompt}: {test['title']}")
-        label = pipeline.grade(perturbed_text, test['topic'])
-        gt = "acceptable" if flip_label ^ (test['ground_truth'] == "acceptable") else "unacceptable"
-        validity = "approved" if flip_label ^ (test['ground_truth'] == label) else "denied"
-
-        pert_id = uuid4().hex
-        pert = {
-            "id": pert_id,
-            "original_id": test["id"],
-            "title": perturbed_text,
-            "label": label,
-            "type": pert_name,
-            "prompt": prompt,
-            "topic": test["topic"],
-            "ground_truth": gt,
-            "validity": validity
-        }
-
-        _db.collection("users").document(uid).collection("perturbations").document(pert_id).set(pert)
-        log_action(uid, "add_custom_perturbation", pert)
-        results.append(pert)
-
-    return {"custom_type": pert_name, "perturbations": results}
-
-
-def test_new_perturbation(uid: str, prompt: str, test_case: str):
-    pipeline = get_model_pipeline(uid)
-    perturbed_text = pipeline.custom_perturb(f"{prompt}: {test_case}")
-    return {"perturbed": perturbed_text}
-
-
-def get_all_perturbation_types(uid: str):
-    user_types = list(custom_pert_types.get(uid, {}).keys())
-    return {"custom_types": user_types}
-
-
-def get_perturbation_type(uid: str, pert_type: str):
-    user_map = custom_pert_types.get(uid, {})
-    if pert_type not in user_map:
-        raise ValueError("Perturbation type not found")
-    return user_map[pert_type]
+    except Exception as e:
+        raise Exception(f"Error generating perturbations: {str(e)}")
 
 
-def get_default_perturbations(config: str):
-    if config not in DEFAULT_PERTURBATION_TYPES:
-        raise ValueError("Invalid configuration")
-    return {"default_types": DEFAULT_PERTURBATION_TYPES[config]}
+def get_perturbations_by_topic(uid: str, topic: str):
+    """
+    Fetch all perturbations for a specific topic and user.
+    Returns perturbations grouped by original test ID.
+    """
+    if not FIREBASE_AVAILABLE:
+        raise Exception("Firebase dependencies not available")
+
+    try:
+        # Query perturbations collection for the user and topic
+        perturbations_ref = _db.collection("users").document(uid).collection("perturbations")
+        query = perturbations_ref.where("topic", "==", topic)
+        
+        perturbations_docs = query.get()
+        
+        perturbations = []
+        for doc in perturbations_docs:
+            perturbation_data = doc.to_dict()
+            perturbation_data["id"] = doc.id
+            perturbations.append(perturbation_data)
+        
+        return {"perturbations": perturbations}
+    
+    except Exception as e:
+        raise Exception(f"Error fetching perturbations: {str(e)}")

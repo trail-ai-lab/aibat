@@ -29,19 +29,15 @@ import {
   IconCircleCheckFilled,
   IconDotsVertical,
   IconGripVertical,
-  IconLayoutColumns,
   IconLoader,
-  IconPlus,
-  IconSparkles,
-  IconTrendingUp,
   IconCheck,
   IconX,
+  IconChevronUp,
 } from "@tabler/icons-react"
-import { ModelSelector } from "@/components/model-selector"
 import { ChartPieLabel } from "@/components/char-area-interactive"
 import { ChartTooltipDefault } from "@/components/chart-tooltip-default"
-import { AddStatementsForm } from "@/components/add-statements-form"
-import { GenerateStatementsForm } from "@/components/generate-statements-form"
+import { TableActionsToolbar } from "@/components/table-actions-toolbar"
+import { type PerturbationResponse } from "@/lib/api/perturbations"
 
 
 import {
@@ -59,8 +55,6 @@ import {
   useReactTable,
   VisibilityState,
 } from "@tanstack/react-table"
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
-import { toast } from "sonner"
 import { z } from "zod"
 
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -79,7 +73,6 @@ import {
 } from "@/components/ui/drawer"
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -94,7 +87,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
 import {
   Table,
   TableBody,
@@ -123,6 +115,9 @@ export const schema = z.object({
   author: z.string().optional(),
   model_score: z.string().optional(),
   is_builtin: z.boolean().optional(),
+  parent_id: z.string().optional(),
+  criteria_text: z.string().optional(),
+  perturbation_type: z.string().optional(),
 })
 
 // Create a separate component for the drag handle
@@ -149,7 +144,10 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
   {
     id: "drag",
     header: () => null,
-    cell: ({ row }) => <DragHandle id={row.original.id} />,
+    cell: ({ row }) => {
+      const isChildRow = !!row.original.parent_id;
+      return isChildRow ? null : <DragHandle id={row.original.id} />;
+    },
   },
   {
     id: "select",
@@ -165,15 +163,18 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
         />
       </div>
     ),
-    cell: ({ row }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      </div>
-    ),
+    cell: ({ row }) => {
+      const isChildRow = !!row.original.parent_id;
+      return isChildRow ? null : (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        </div>
+      );
+    },
     enableSorting: false,
     enableHiding: false,
   },
@@ -181,6 +182,14 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
     accessorKey: "statement",
     header: "Statements",
     cell: ({ row }) => {
+      const isChildRow = !!row.original.parent_id;
+      if (isChildRow) {
+        return (
+          <div className="pl-4 text-sm text-muted-foreground">
+            {row.original.statement}
+          </div>
+        );
+      }
       return <TableCellViewer item={row.original} />
     },
     enableHiding: false,
@@ -224,10 +233,41 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
   {
     accessorKey: "your_assessment",
     header: "Your Assessment",
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
+      const isChildRow = !!row.original.parent_id;
       const assessment = row.original.your_assessment;
       const testId = row.original.id;
       
+      // For child rows (perturbations), check parent assessment status
+      if (isChildRow) {
+        const parentId = row.original.parent_id;
+        const allRows = (table.options.data as z.infer<typeof schema>[]) || [];
+        const parentRow = allRows.find(r => r.id === parentId && !r.parent_id);
+        
+        // If parent is ungraded, show perturbation as ungraded
+        if (parentRow?.your_assessment === "ungraded") {
+          return (
+            <Badge variant="outline" className="px-1.5 text-gray-600 border-gray-200">
+              Ungraded
+            </Badge>
+          );
+        }
+        
+        // If parent is graded, show perturbation's ground_truth value
+        const groundTruth = row.original.ground_truth;
+        const badgeClass = groundTruth === "acceptable"
+          ? "px-1.5 text-green-600 border-green-200"
+          : "px-1.5 text-red-600 border-red-200";
+        const displayText = groundTruth === "acceptable" ? "Acceptable" : "Unacceptable";
+        
+        return (
+          <Badge variant="outline" className={badgeClass}>
+            {displayText}
+          </Badge>
+        );
+      }
+      
+      // For parent rows, use existing logic
       if (assessment === "ungraded") {
         return (
           <div className="flex items-center gap-2">
@@ -258,7 +298,7 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
         );
       }
       
-      // For graded items, show the regular badge
+      // For graded parent items, show the regular badge
       const badgeClass = assessment === "acceptable"
         ? "px-1.5 text-green-600 border-green-200"
         : "px-1.5 text-red-600 border-red-200";
@@ -274,11 +314,56 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
   {
     accessorKey: "agreement",
     header: "Agreement",
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
+      const isChildRow = !!row.original.parent_id;
       const agreement = row.original.agreement;
       const aiAssessment = row.original.ai_assessment;
       const yourAssessment = row.original.your_assessment;
       
+      // For child rows (perturbations), handle agreement calculation differently
+      if (isChildRow) {
+        const parentId = row.original.parent_id;
+        const allRows = (table.options.data as z.infer<typeof schema>[]) || [];
+        const parentRow = allRows.find(r => r.id === parentId && !r.parent_id);
+        
+        // If parent is ungraded or AI is still grading, show pending
+        if (parentRow?.your_assessment === "ungraded" || aiAssessment === "grading") {
+          return (
+            <Badge
+              variant="outline"
+              className="px-1.5 text-gray-600 border-gray-200"
+            >
+              <IconLoader className="mr-1 h-3 w-3" />
+              Pending
+            </Badge>
+          );
+        }
+        
+        // For perturbations, compare AI assessment with ground_truth (which is shown as Your Assessment)
+        const groundTruth = row.original.ground_truth;
+        const aiResult = aiAssessment === "pass" ? "acceptable" : "unacceptable";
+        const isMatch = aiResult === groundTruth;
+        
+        return (
+          <Badge
+            variant="outline"
+            className={`px-1.5 ${
+              isMatch
+                ? "text-green-600 border-green-200"
+                : "text-orange-600 border-orange-200"
+            }`}
+          >
+            {isMatch ? (
+              <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400 mr-1" />
+            ) : (
+              <IconX className="mr-1 h-3 w-3" />
+            )}
+            {isMatch ? "Match" : "Mismatch"}
+          </Badge>
+        );
+      }
+      
+      // For parent rows, use existing logic
       // If AI is still grading or user hasn't assessed, show pending
       if (aiAssessment === "grading" || yourAssessment === "ungraded" || agreement === null) {
         return (
@@ -311,35 +396,83 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
       );
     },
   },
+  {
+    accessorKey: "criteria",
+    header: "Criteria",
+    cell: ({ row, table }) => {
+      const isChildRow = !!row.original.parent_id;
+      const expandedRows = (table.options.meta as Record<string, unknown>)?.expandedRows as Set<string> || new Set();
+      const isExpanded = expandedRows.has(row.original.id);
+      const toggleExpanded = (table.options.meta as Record<string, unknown>)?.toggleExpanded as ((id: string) => void) | undefined;
+      
+      if (isChildRow) {
+        return (
+          <div className="pl-4">
+            <Badge variant="secondary" className="text-xs">
+              {row.original.perturbation_type || row.original.criteria_text || "Perturbation"}
+            </Badge>
+          </div>
+        );
+      }
+      
+      // Only show expand button if this row has perturbations
+      const hasChildRows = (table.options.meta as Record<string, unknown>)?.perturbations as Map<string, unknown> | undefined;
+      const hasChildRowsForThisRow = hasChildRows?.has(row.original.id) || false;
+      
+      if (!hasChildRowsForThisRow) {
+        return null;
+      }
+      
+      return (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 w-6 p-0"
+          onClick={() => toggleExpanded?.(row.original.id)}
+        >
+          {isExpanded ? (
+            <IconChevronUp className="h-4 w-4" />
+          ) : (
+            <IconChevronDown className="h-4 w-4" />
+          )}
+        </Button>
+      );
+    },
+  },
     {
     id: "actions",
-    cell: () => (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
-            size="icon"
-          >
-            <IconDotsVertical />
-            <span className="sr-only">Open menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-32">
-          <DropdownMenuItem>Edit</DropdownMenuItem>
-          <DropdownMenuItem>Make a copy</DropdownMenuItem>
-          <DropdownMenuItem>Favorite</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    ),
+    cell: ({ row }) => {
+      const isChildRow = !!row.original.parent_id;
+      return isChildRow ? null : (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
+              size="icon"
+            >
+              <IconDotsVertical />
+              <span className="sr-only">Open menu</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-32">
+            <DropdownMenuItem>Edit</DropdownMenuItem>
+            <DropdownMenuItem>Make a copy</DropdownMenuItem>
+            <DropdownMenuItem>Favorite</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    },
   },
 ]
 
 function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
+  const isChildRow = !!row.original.parent_id
   const { transform, transition, setNodeRef, isDragging } = useSortable({
     id: row.original.id,
+    disabled: isChildRow, // Disable dragging for child rows
   })
 
   return (
@@ -347,7 +480,9 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
       data-state={row.getIsSelected() && "selected"}
       data-dragging={isDragging}
       ref={setNodeRef}
-      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
+      className={`relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80 ${
+        isChildRow ? 'bg-muted/30' : ''
+      }`}
       style={{
         transform: CSS.Transform.toString(transform),
         transition: transition,
@@ -355,7 +490,7 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
       }}
     >
       {row.getVisibleCells().map((cell) => (
-        <TableCell key={cell.id}>
+        <TableCell key={cell.id} className={isChildRow ? 'border-l-2 border-l-muted-foreground/20' : ''}>
           {flexRender(cell.column.columnDef.cell, cell.getContext())}
         </TableCell>
       ))}
@@ -368,16 +503,21 @@ export function DataTable({
   onAssessmentChange,
   currentTopic,
   onDataRefresh,
+  cachedPerturbations,
+  onPerturbationsUpdate,
 }: {
   data: z.infer<typeof schema>[]
   onAssessmentChange?: (id: string, assessment: "acceptable" | "unacceptable") => void
   currentTopic?: string
   onDataRefresh?: () => void
+  cachedPerturbations?: Map<string, PerturbationResponse[]>
+  onPerturbationsUpdate?: (newPerturbations: Map<string, PerturbationResponse[]>) => void
 }) {
+  const [expandedRows, setExpandedRows] = React.useState<Set<string>>(new Set())
   const [data, setData] = React.useState(() => initialData)
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
+    React.useState<VisibilityState>({ criteria: !!(cachedPerturbations && cachedPerturbations.size > 0) }) // Show criteria column if cached perturbations exist
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   )
@@ -388,6 +528,9 @@ export function DataTable({
   })
   const [isAddStatementsOpen, setIsAddStatementsOpen] = React.useState(false)
   const [isGenerateStatementsOpen, setIsGenerateStatementsOpen] = React.useState(false)
+  const [isCriteriaEditorOpen, setIsCriteriaEditorOpen] = React.useState(false)
+  const [perturbations, setPerturbations] = React.useState<Map<string, PerturbationResponse[]>>(new Map())
+  const [isGeneratingPerturbations, setIsGeneratingPerturbations] = React.useState(false)
   const sortableId = React.useId()
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
@@ -395,14 +538,56 @@ export function DataTable({
     useSensor(KeyboardSensor, {})
   )
 
+  // Update perturbations when cached perturbations change
+  React.useEffect(() => {
+    if (cachedPerturbations) {
+      setPerturbations(cachedPerturbations)
+      // Show criteria column if we have cached perturbations
+      if (cachedPerturbations.size > 0) {
+        setColumnVisibility(prev => ({ ...prev, criteria: true }))
+      }
+    }
+  }, [cachedPerturbations])
+
+  const toggleExpanded = React.useCallback((rowId: string) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(rowId)) {
+        newSet.delete(rowId)
+      } else {
+        newSet.add(rowId)
+      }
+      return newSet
+    })
+  }, [])
+
+  // Generate child rows for expanded parent rows using actual perturbations
+  const generateChildRows = React.useCallback((parentRow: z.infer<typeof schema>) => {
+    const childRows: z.infer<typeof schema>[] = []
+    const parentPerturbations = perturbations.get(parentRow.id) || []
+    
+    parentPerturbations.forEach((perturbation) => {
+      childRows.push({
+        ...parentRow,
+        id: perturbation.id,
+        statement: perturbation.title,
+        parent_id: parentRow.id,
+        criteria_text: perturbation.type,
+        perturbation_type: perturbation.type,
+        ai_assessment: perturbation.label,
+        ground_truth: perturbation.ground_truth,
+        your_assessment: "ungraded", // Perturbations start ungraded
+        agreement: null, // Will be calculated when user assesses
+      })
+    })
+    
+    return childRows
+  }, [perturbations])
+
   const columns = React.useMemo(() => createColumns(onAssessmentChange), [onAssessmentChange])
 
-  const dataIds = React.useMemo<UniqueIdentifier[]>(
-    () => data?.map(({ id }) => id) || [],
-    [data]
-  )
-
-  const table = useReactTable({
+  // Create a table with only parent rows for pagination
+  const parentTable = useReactTable({
     data,
     columns,
     state: {
@@ -425,28 +610,80 @@ export function DataTable({
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
+    meta: {
+      expandedRows,
+      toggleExpanded,
+    },
+  })
+
+  // Get the paginated parent rows and then expand them with child rows
+  const paginatedExpandedData = React.useMemo(() => {
+    const paginatedParentRows = parentTable.getRowModel().rows
+    const result: z.infer<typeof schema>[] = []
+    
+    paginatedParentRows.forEach(row => {
+      // Add parent row
+      result.push(row.original)
+      
+      // Add child rows if expanded and has perturbations
+      if (expandedRows.has(row.original.id) && perturbations.has(row.original.id)) {
+        const childRows = generateChildRows(row.original)
+        result.push(...childRows)
+      }
+    })
+    
+    return result
+  }, [parentTable.getRowModel().rows, expandedRows, generateChildRows, perturbations])
+
+  const dataIds = React.useMemo<UniqueIdentifier[]>(
+    () => paginatedExpandedData?.map(({ id }) => id) || [],
+    [paginatedExpandedData]
+  )
+
+  // Create a display table with the expanded data but using parent table's state
+  const table = useReactTable({
+    data: paginatedExpandedData,
+    columns,
+    state: {
+      sorting: parentTable.getState().sorting,
+      columnVisibility: parentTable.getState().columnVisibility,
+      rowSelection: parentTable.getState().rowSelection,
+      columnFilters: parentTable.getState().columnFilters,
+      pagination: { pageIndex: 0, pageSize: paginatedExpandedData.length }, // Show all expanded data
+    },
+    getRowId: (row) => row.id.toString(),
+    enableRowSelection: true,
+    onRowSelectionChange: parentTable.setRowSelection,
+    onSortingChange: parentTable.setSorting,
+    onColumnFiltersChange: parentTable.setColumnFilters,
+    onColumnVisibilityChange: parentTable.setColumnVisibility,
+    getCoreRowModel: getCoreRowModel(),
+    meta: {
+      expandedRows,
+      toggleExpanded,
+      perturbations,
+    },
   })
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     if (active && over && active.id !== over.id) {
+      // Only allow dragging of parent rows (not child rows)
+      const activeRow = paginatedExpandedData.find(row => row.id === active.id)
+      const overRow = paginatedExpandedData.find(row => row.id === over.id)
+      
+      if (activeRow?.parent_id || overRow?.parent_id) {
+        return // Don't allow dragging child rows or dropping on child rows
+      }
+      
       setData((data) => {
-        const oldIndex = dataIds.indexOf(active.id)
-        const newIndex = dataIds.indexOf(over.id)
+        const oldIndex = data.findIndex(row => row.id === active.id)
+        const newIndex = data.findIndex(row => row.id === over.id)
         return arrayMove(data, oldIndex, newIndex)
       })
     }
   }
 
-  const handleAddStatementsSuccess = () => {
-    // Refresh the data after successfully adding statements
-    onDataRefresh?.()
-  }
-
-  const handleGenerateStatementsSuccess = () => {
-    // Refresh the data after successfully generating statements
-    onDataRefresh?.()
-  }
 
 
   return (
@@ -477,77 +714,45 @@ export function DataTable({
             Evaluations
           </TabsTrigger>
         </TabsList>
-        <div className="flex items-center gap-2">
-          <ModelSelector currentTopic={currentTopic} />
-          <Drawer
-            direction="bottom"
-            open={isAddStatementsOpen}
-            onOpenChange={setIsAddStatementsOpen}
-          >
-            <DrawerTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!currentTopic}
-                title={!currentTopic ? "Select a topic to add statements" : "Add statements to this topic"}
-              >
-                <IconPlus />
-                <span className="hidden lg:inline">Add Statements</span>
-              </Button>
-            </DrawerTrigger>
-            <DrawerContent>
-              <DrawerHeader className="gap-1">
-                <DrawerTitle>Add Statements</DrawerTitle>
-                <DrawerDescription>
-                  Add new test statements to the current topic
-                </DrawerDescription>
-              </DrawerHeader>
-              <div className="flex flex-col gap-4 overflow-y-auto px-4">
-                {currentTopic && (
-                  <AddStatementsForm
-                    topicName={currentTopic}
-                    onClose={() => setIsAddStatementsOpen(false)}
-                    onSuccess={handleAddStatementsSuccess}
-                  />
-                )}
-              </div>
-            </DrawerContent>
-          </Drawer>
-          <Drawer
-            direction="bottom"
-            open={isGenerateStatementsOpen}
-            onOpenChange={setIsGenerateStatementsOpen}
-          >
-            <DrawerTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!currentTopic}
-                title={!currentTopic ? "Select a topic to generate statements" : "Generate AI statements for this topic"}
-              >
-                <IconSparkles />
-                <span className="hidden lg:inline">Generate Statements</span>
-              </Button>
-            </DrawerTrigger>
-            <DrawerContent>
-              <DrawerHeader className="gap-1">
-                <DrawerTitle>Generate Statements</DrawerTitle>
-                <DrawerDescription>
-                  Generate new test statements using AI based on existing statements
-                </DrawerDescription>
-              </DrawerHeader>
-              <div className="flex flex-col gap-4 overflow-y-auto px-4">
-                {currentTopic && (
-                  <GenerateStatementsForm
-                    topicName={currentTopic}
-                    onClose={() => setIsGenerateStatementsOpen(false)}
-                    onSuccess={handleGenerateStatementsSuccess}
-                  />
-                )}
-              </div>
-            </DrawerContent>
-          </Drawer>
-        </div>
+        <TableActionsToolbar
+          currentTopic={currentTopic}
+          selectedRowsCount={parentTable.getFilteredSelectedRowModel().rows.length}
+          selectedTestIds={parentTable.getFilteredSelectedRowModel().rows.map(row => row.original.id)}
+          isGeneratingPerturbations={isGeneratingPerturbations}
+          onGeneratingChange={setIsGeneratingPerturbations}
+          onPerturbationsGenerated={(newPerturbations) => {
+            setPerturbations(prev => {
+              const updated = new Map(prev)
+              newPerturbations.forEach((perturbationList, originalId) => {
+                if (updated.has(originalId)) {
+                  // Replace existing perturbations with new ones, using type as key to avoid duplicates
+                  const existing = updated.get(originalId)!
+                  const existingByType = new Map(existing.map(p => [p.type, p]))
+                  
+                  // Update or add new perturbations
+                  perturbationList.forEach(newPert => {
+                    existingByType.set(newPert.type, newPert)
+                  })
+                  
+                  updated.set(originalId, Array.from(existingByType.values()))
+                } else {
+                  updated.set(originalId, perturbationList)
+                }
+              })
+              return updated
+            })
+            // Also update the parent component if callback is provided
+            onPerturbationsUpdate?.(newPerturbations)
+          }}
+          onShowCriteriaColumn={() => setColumnVisibility(prev => ({ ...prev, criteria: true }))}
+          isCriteriaEditorOpen={isCriteriaEditorOpen}
+          onCriteriaEditorOpenChange={setIsCriteriaEditorOpen}
+          isAddStatementsOpen={isAddStatementsOpen}
+          onAddStatementsOpenChange={setIsAddStatementsOpen}
+          isGenerateStatementsOpen={isGenerateStatementsOpen}
+          onGenerateStatementsOpenChange={setIsGenerateStatementsOpen}
+          onDataRefresh={onDataRefresh}
+        />
       </div>
       <TabsContent
         value="outline"
@@ -606,8 +811,8 @@ export function DataTable({
         </div>
         <div className="flex items-center justify-between px-4">
           <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
+            {parentTable.getFilteredSelectedRowModel().rows.length} of{" "}
+            {parentTable.getFilteredRowModel().rows.length} row(s) selected.
           </div>
           <div className="flex w-full items-center gap-8 lg:w-fit">
             <div className="hidden items-center gap-2 lg:flex">
@@ -615,14 +820,14 @@ export function DataTable({
                 Rows per page
               </Label>
               <Select
-                value={`${table.getState().pagination.pageSize}`}
+                value={`${parentTable.getState().pagination.pageSize}`}
                 onValueChange={(value) => {
-                  table.setPageSize(Number(value))
+                  parentTable.setPageSize(Number(value))
                 }}
               >
                 <SelectTrigger size="sm" className="w-20" id="rows-per-page">
                   <SelectValue
-                    placeholder={table.getState().pagination.pageSize}
+                    placeholder={parentTable.getState().pagination.pageSize}
                   />
                 </SelectTrigger>
                 <SelectContent side="top">
@@ -635,15 +840,15 @@ export function DataTable({
               </Select>
             </div>
             <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Page {table.getState().pagination.pageIndex + 1} of{" "}
-              {table.getPageCount()}
+              Page {parentTable.getState().pagination.pageIndex + 1} of{" "}
+              {parentTable.getPageCount()}
             </div>
             <div className="ml-auto flex items-center gap-2 lg:ml-0">
               <Button
                 variant="outline"
                 className="hidden h-8 w-8 p-0 lg:flex"
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
+                onClick={() => parentTable.setPageIndex(0)}
+                disabled={!parentTable.getCanPreviousPage()}
               >
                 <span className="sr-only">Go to first page</span>
                 <IconChevronsLeft />
@@ -652,8 +857,8 @@ export function DataTable({
                 variant="outline"
                 className="size-8"
                 size="icon"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
+                onClick={() => parentTable.previousPage()}
+                disabled={!parentTable.getCanPreviousPage()}
               >
                 <span className="sr-only">Go to previous page</span>
                 <IconChevronLeft />
@@ -662,8 +867,8 @@ export function DataTable({
                 variant="outline"
                 className="size-8"
                 size="icon"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
+                onClick={() => parentTable.nextPage()}
+                disabled={!parentTable.getCanNextPage()}
               >
                 <span className="sr-only">Go to next page</span>
                 <IconChevronRight />
@@ -672,8 +877,8 @@ export function DataTable({
                 variant="outline"
                 className="hidden size-8 lg:flex"
                 size="icon"
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
+                onClick={() => parentTable.setPageIndex(parentTable.getPageCount() - 1)}
+                disabled={!parentTable.getCanNextPage()}
               >
                 <span className="sr-only">Go to last page</span>
                 <IconChevronsRight />
