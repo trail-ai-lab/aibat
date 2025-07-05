@@ -489,33 +489,11 @@ export function DataTable({
     return childRows
   }, [])
 
-  // Expand data with child rows
-  const expandedData = React.useMemo(() => {
-    const result: z.infer<typeof schema>[] = []
-    
-    data.forEach(row => {
-      // Add parent row
-      result.push(row)
-      
-      // Add child rows if expanded
-      if (expandedRows.has(row.id)) {
-        const childRows = generateChildRows(row)
-        result.push(...childRows)
-      }
-    })
-    
-    return result
-  }, [data, expandedRows, generateChildRows])
-
   const columns = React.useMemo(() => createColumns(onAssessmentChange), [onAssessmentChange])
 
-  const dataIds = React.useMemo<UniqueIdentifier[]>(
-    () => expandedData?.map(({ id }) => id) || [],
-    [expandedData]
-  )
-
-  const table = useReactTable({
-    data: expandedData,
+  // Create a table with only parent rows for pagination
+  const parentTable = useReactTable({
+    data,
     columns,
     state: {
       sorting,
@@ -543,12 +521,60 @@ export function DataTable({
     },
   })
 
+  // Get the paginated parent rows and then expand them with child rows
+  const paginatedExpandedData = React.useMemo(() => {
+    const paginatedParentRows = parentTable.getRowModel().rows
+    const result: z.infer<typeof schema>[] = []
+    
+    paginatedParentRows.forEach(row => {
+      // Add parent row
+      result.push(row.original)
+      
+      // Add child rows if expanded
+      if (expandedRows.has(row.original.id)) {
+        const childRows = generateChildRows(row.original)
+        result.push(...childRows)
+      }
+    })
+    
+    return result
+  }, [parentTable.getRowModel().rows, expandedRows, generateChildRows])
+
+  const dataIds = React.useMemo<UniqueIdentifier[]>(
+    () => paginatedExpandedData?.map(({ id }) => id) || [],
+    [paginatedExpandedData]
+  )
+
+  // Create a display table with the expanded data but using parent table's state
+  const table = useReactTable({
+    data: paginatedExpandedData,
+    columns,
+    state: {
+      sorting: parentTable.getState().sorting,
+      columnVisibility: parentTable.getState().columnVisibility,
+      rowSelection: parentTable.getState().rowSelection,
+      columnFilters: parentTable.getState().columnFilters,
+      pagination: { pageIndex: 0, pageSize: paginatedExpandedData.length }, // Show all expanded data
+    },
+    getRowId: (row) => row.id.toString(),
+    enableRowSelection: true,
+    onRowSelectionChange: parentTable.setRowSelection,
+    onSortingChange: parentTable.setSorting,
+    onColumnFiltersChange: parentTable.setColumnFilters,
+    onColumnVisibilityChange: parentTable.setColumnVisibility,
+    getCoreRowModel: getCoreRowModel(),
+    meta: {
+      expandedRows,
+      toggleExpanded,
+    },
+  })
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     if (active && over && active.id !== over.id) {
       // Only allow dragging of parent rows (not child rows)
-      const activeRow = expandedData.find(row => row.id === active.id)
-      const overRow = expandedData.find(row => row.id === over.id)
+      const activeRow = paginatedExpandedData.find(row => row.id === active.id)
+      const overRow = paginatedExpandedData.find(row => row.id === over.id)
       
       if (activeRow?.parent_id || overRow?.parent_id) {
         return // Don't allow dragging child rows or dropping on child rows
@@ -730,8 +756,8 @@ export function DataTable({
         </div>
         <div className="flex items-center justify-between px-4">
           <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
+            {parentTable.getFilteredSelectedRowModel().rows.length} of{" "}
+            {parentTable.getFilteredRowModel().rows.length} row(s) selected.
           </div>
           <div className="flex w-full items-center gap-8 lg:w-fit">
             <div className="hidden items-center gap-2 lg:flex">
@@ -739,14 +765,14 @@ export function DataTable({
                 Rows per page
               </Label>
               <Select
-                value={`${table.getState().pagination.pageSize}`}
+                value={`${parentTable.getState().pagination.pageSize}`}
                 onValueChange={(value) => {
-                  table.setPageSize(Number(value))
+                  parentTable.setPageSize(Number(value))
                 }}
               >
                 <SelectTrigger size="sm" className="w-20" id="rows-per-page">
                   <SelectValue
-                    placeholder={table.getState().pagination.pageSize}
+                    placeholder={parentTable.getState().pagination.pageSize}
                   />
                 </SelectTrigger>
                 <SelectContent side="top">
@@ -759,15 +785,15 @@ export function DataTable({
               </Select>
             </div>
             <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Page {table.getState().pagination.pageIndex + 1} of{" "}
-              {table.getPageCount()}
+              Page {parentTable.getState().pagination.pageIndex + 1} of{" "}
+              {parentTable.getPageCount()}
             </div>
             <div className="ml-auto flex items-center gap-2 lg:ml-0">
               <Button
                 variant="outline"
                 className="hidden h-8 w-8 p-0 lg:flex"
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
+                onClick={() => parentTable.setPageIndex(0)}
+                disabled={!parentTable.getCanPreviousPage()}
               >
                 <span className="sr-only">Go to first page</span>
                 <IconChevronsLeft />
@@ -776,8 +802,8 @@ export function DataTable({
                 variant="outline"
                 className="size-8"
                 size="icon"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
+                onClick={() => parentTable.previousPage()}
+                disabled={!parentTable.getCanPreviousPage()}
               >
                 <span className="sr-only">Go to previous page</span>
                 <IconChevronLeft />
@@ -786,8 +812,8 @@ export function DataTable({
                 variant="outline"
                 className="size-8"
                 size="icon"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
+                onClick={() => parentTable.nextPage()}
+                disabled={!parentTable.getCanNextPage()}
               >
                 <span className="sr-only">Go to next page</span>
                 <IconChevronRight />
@@ -796,8 +822,8 @@ export function DataTable({
                 variant="outline"
                 className="hidden size-8 lg:flex"
                 size="icon"
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
+                onClick={() => parentTable.setPageIndex(parentTable.getPageCount() - 1)}
+                disabled={!parentTable.getCanNextPage()}
               >
                 <span className="sr-only">Go to last page</span>
                 <IconChevronsRight />
