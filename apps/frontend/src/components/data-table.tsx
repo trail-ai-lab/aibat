@@ -30,21 +30,14 @@ import {
   IconDotsVertical,
   IconGripVertical,
   IconLoader,
-  IconPlus,
-  IconSparkles,
-  IconTrendingUp,
   IconCheck,
   IconX,
   IconChevronUp,
-  IconSettings,
 } from "@tabler/icons-react"
-import { ModelSelector } from "@/components/model-selector"
 import { ChartPieLabel } from "@/components/char-area-interactive"
 import { ChartTooltipDefault } from "@/components/chart-tooltip-default"
-import { AddStatementsForm } from "@/components/add-statements-form"
-import { GenerateStatementsForm } from "@/components/generate-statements-form"
-import { CriteriaEditor } from "@/components/criteria-editor"
-import { generatePerturbations, type PerturbationResponse } from "@/lib/api/perturbations"
+import { TableActionsToolbar } from "@/components/table-actions-toolbar"
+import { type PerturbationResponse } from "@/lib/api/perturbations"
 
 
 import {
@@ -62,7 +55,6 @@ import {
   useReactTable,
   VisibilityState,
 } from "@tanstack/react-table"
-import { toast } from "sonner"
 import { z } from "zod"
 
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -604,75 +596,6 @@ export function DataTable({
     }
   }
 
-  const handleAddStatementsSuccess = () => {
-    // Refresh the data after successfully adding statements
-    onDataRefresh?.()
-  }
-
-  const handleGenerateStatementsSuccess = () => {
-    // Refresh the data after successfully generating statements
-    onDataRefresh?.()
-  }
-
-  const handleAnalyzeAIBehavior = async () => {
-    console.log("Analyze AI Behavior button clicked!")
-    console.log("Current topic:", currentTopic)
-    
-    if (!currentTopic) {
-      console.log("No topic selected")
-      toast.error("Please select a topic first")
-      return
-    }
-
-    const selectedRows = parentTable.getFilteredSelectedRowModel().rows
-    console.log("Selected rows:", selectedRows.length)
-    
-    if (selectedRows.length === 0) {
-      console.log("No rows selected")
-      toast.error("Please select at least one test statement")
-      return
-    }
-
-    console.log("Setting loading state...")
-    setIsGeneratingPerturbations(true)
-    
-    try {
-      const testIds = selectedRows.map(row => row.original.id)
-      console.log("Test IDs to generate perturbations for:", testIds)
-      
-      console.log("Calling generatePerturbations API...")
-      const result = await generatePerturbations({
-        topic: currentTopic,
-        test_ids: testIds
-      })
-      
-      console.log("API response:", result)
-
-      // Group perturbations by original test ID
-      const perturbationMap = new Map<string, PerturbationResponse[]>()
-      result.perturbations.forEach(perturbation => {
-        const originalId = perturbation.original_id
-        if (!perturbationMap.has(originalId)) {
-          perturbationMap.set(originalId, [])
-        }
-        perturbationMap.get(originalId)!.push(perturbation)
-      })
-
-      console.log("Perturbation map:", perturbationMap)
-      setPerturbations(perturbationMap)
-      
-      // Show the criteria column now that we have perturbations
-      setColumnVisibility(prev => ({ ...prev, criteria: true }))
-      
-      toast.success(`Generated ${result.perturbations.length} perturbations for ${selectedRows.length} test statements`)
-    } catch (error) {
-      console.error("Error generating perturbations:", error)
-      toast.error("Failed to generate perturbations. Please try again.")
-    } finally {
-      console.log("Clearing loading state...")
-      setIsGeneratingPerturbations(false)
-    }
-  }
 
 
   return (
@@ -703,123 +626,22 @@ export function DataTable({
             Evaluations
           </TabsTrigger>
         </TabsList>
-        <div className="flex items-center gap-2">
-          <ModelSelector currentTopic={currentTopic} />
-          <Drawer
-            direction="bottom"
-            open={isCriteriaEditorOpen}
-            onOpenChange={setIsCriteriaEditorOpen}
-          >
-            <DrawerTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                title="Manage criteria for perturbations"
-              >
-                <IconSettings />
-                <span className="hidden lg:inline">Criteria</span>
-              </Button>
-            </DrawerTrigger>
-            <DrawerContent>
-              <DrawerHeader className="gap-1">
-                <DrawerTitle>Criteria Management</DrawerTitle>
-                <DrawerDescription>
-                  Manage perturbation criteria types for generating test variations
-                </DrawerDescription>
-              </DrawerHeader>
-              <div className="flex flex-col gap-4 overflow-y-auto px-4">
-                <CriteriaEditor
-                  onClose={() => setIsCriteriaEditorOpen(false)}
-                  currentTopic={currentTopic}
-                />
-              </div>
-            </DrawerContent>
-          </Drawer>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!currentTopic || isGeneratingPerturbations}
-            onClick={handleAnalyzeAIBehavior}
-            title={!currentTopic ? "Select a topic to analyze AI behavior" : "Generate perturbations for selected test statements"}
-          >
-            {isGeneratingPerturbations ? (
-              <IconLoader className="animate-spin" />
-            ) : (
-              <IconTrendingUp />
-            )}
-            <span className="hidden lg:inline">
-              {isGeneratingPerturbations ? "Analyzing..." : "Analyze AI Behavior"}
-            </span>
-          </Button>
-          <Drawer
-            direction="bottom"
-            open={isAddStatementsOpen}
-            onOpenChange={setIsAddStatementsOpen}
-          >
-            <DrawerTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!currentTopic}
-                title={!currentTopic ? "Select a topic to add statements" : "Add statements to this topic"}
-              >
-                <IconPlus />
-                <span className="hidden lg:inline">Add Statements</span>
-              </Button>
-            </DrawerTrigger>
-            <DrawerContent>
-              <DrawerHeader className="gap-1">
-                <DrawerTitle>Add Statements</DrawerTitle>
-                <DrawerDescription>
-                  Add new test statements to the current topic
-                </DrawerDescription>
-              </DrawerHeader>
-              <div className="flex flex-col gap-4 overflow-y-auto px-4">
-                {currentTopic && (
-                  <AddStatementsForm
-                    topicName={currentTopic}
-                    onClose={() => setIsAddStatementsOpen(false)}
-                    onSuccess={handleAddStatementsSuccess}
-                  />
-                )}
-              </div>
-            </DrawerContent>
-          </Drawer>
-          <Drawer
-            direction="bottom"
-            open={isGenerateStatementsOpen}
-            onOpenChange={setIsGenerateStatementsOpen}
-          >
-            <DrawerTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!currentTopic}
-                title={!currentTopic ? "Select a topic to generate statements" : "Generate AI statements for this topic"}
-              >
-                <IconSparkles />
-                <span className="hidden lg:inline">Generate Statements</span>
-              </Button>
-            </DrawerTrigger>
-            <DrawerContent>
-              <DrawerHeader className="gap-1">
-                <DrawerTitle>Generate Statements</DrawerTitle>
-                <DrawerDescription>
-                  Generate new test statements using AI based on existing statements
-                </DrawerDescription>
-              </DrawerHeader>
-              <div className="flex flex-col gap-4 overflow-y-auto px-4">
-                {currentTopic && (
-                  <GenerateStatementsForm
-                    topicName={currentTopic}
-                    onClose={() => setIsGenerateStatementsOpen(false)}
-                    onSuccess={handleGenerateStatementsSuccess}
-                  />
-                )}
-              </div>
-            </DrawerContent>
-          </Drawer>
-        </div>
+        <TableActionsToolbar
+          currentTopic={currentTopic}
+          selectedRowsCount={parentTable.getFilteredSelectedRowModel().rows.length}
+          selectedTestIds={parentTable.getFilteredSelectedRowModel().rows.map(row => row.original.id)}
+          isGeneratingPerturbations={isGeneratingPerturbations}
+          onGeneratingChange={setIsGeneratingPerturbations}
+          onPerturbationsGenerated={setPerturbations}
+          onShowCriteriaColumn={() => setColumnVisibility(prev => ({ ...prev, criteria: true }))}
+          isCriteriaEditorOpen={isCriteriaEditorOpen}
+          onCriteriaEditorOpenChange={setIsCriteriaEditorOpen}
+          isAddStatementsOpen={isAddStatementsOpen}
+          onAddStatementsOpenChange={setIsAddStatementsOpen}
+          isGenerateStatementsOpen={isGenerateStatementsOpen}
+          onGenerateStatementsOpenChange={setIsGenerateStatementsOpen}
+          onDataRefresh={onDataRefresh}
+        />
       </div>
       <TabsContent
         value="outline"
