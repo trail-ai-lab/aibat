@@ -8,7 +8,8 @@ Centralized configuration for criteria/perturbation types and prompts
 DEFAULT_CRITERIA_CONFIGS = {
     "AIBAT": ["spelling", "negation", "synonyms", "paraphrase", "acronyms", "antonyms", "spanish"],
     "Mini-AIBAT": ["spelling", "synonyms", "paraphrase", "acronyms", "spanish"],
-    "M-AIBAT": ["spanish", "spanglish", "english", "nouns", "spelling", "cognates", "dialect", "loan_word"]
+    "M-AIBAT": ["spanish", "spanglish", "english", "nouns", "spelling", "cognates", "dialect", "loan_word"],
+    "Large-AIBAT": ["spelling", "negation", "synonyms", "paraphrase", "acronyms", "antonyms", "spanish", "spanglish", "english", "nouns", "cognates", "dialect", "loan_word", "colloquial"]
 }
 
 # Prompts for perturbation generation (used in analyze AI behavior)
@@ -48,6 +49,20 @@ GENERATION_PROMPTS = {
 
 # Criteria types that typically flip the label (change acceptable to unacceptable and vice versa)
 LABEL_FLIPPING_CRITERIA = ["negation", "antonyms"]
+
+def get_default_criteria_configs():
+    result = []
+    for config_name, types in DEFAULT_CRITERIA_CONFIGS.items():
+        result.append({
+            "config": config_name,
+            "types": [
+                {
+                    "name": t,
+                    "prompt": PERTURBATION_PROMPTS.get(t, "No prompt defined")
+                } for t in types
+            ]
+        })
+    return result
 
 def get_criteria_prompt(criteria_name: str, for_generation: bool = False):
     """
