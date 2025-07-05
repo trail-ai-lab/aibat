@@ -42,9 +42,9 @@ export function CriteriaManager({
       </DrawerTrigger>
       <DrawerContent>
         <DrawerHeader className="gap-1">
-          <DrawerTitle>Criteria Management</DrawerTitle>
+          <DrawerTitle>Criteria Editor</DrawerTitle>
           <DrawerDescription>
-            Manage perturbation criteria types for generating test variations
+            {currentTopic}
           </DrawerDescription>
         </DrawerHeader>
         <div className="flex flex-col gap-4 overflow-y-auto px-4">

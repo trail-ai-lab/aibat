@@ -112,8 +112,6 @@ export function CriteriaEditor({ onClose, currentTopic }: CriteriaEditorProps) {
 
   return (
     <div className="w-full h-full flex flex-col space-y-6 p-6">
-      <div className="text-2xl font-light text-center">Criteria Selector</div>
-
       {/* Criteria Configuration Dropdown */}
       <div className="flex items-center gap-4">
         <Label htmlFor="config-select">Criteria Configuration:</Label>

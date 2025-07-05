@@ -86,9 +86,19 @@ def generate_perturbations(uid: str, topic: str, test_ids: list, batch_size: int
                 is_default = criteria.get("isDefault", False)
                 ai_assessment = "pass" if label_result == "acceptable" else "fail"
 
-                expected_gt = test.ground_truth
-                if not is_default and should_flip_label(name):
-                    expected_gt = "unacceptable" if test.ground_truth == "acceptable" else "acceptable"
+                # Use user's current assessment instead of original ground_truth
+                # This is the key fix - use your_assessment from the test object
+                user_assessment = test.your_assessment
+                if user_assessment == "ungraded":
+                    # If user hasn't assessed yet, fall back to original ground_truth
+                    expected_gt = test.ground_truth
+                else:
+                    # Use user's assessment as the base for perturbation ground truth
+                    expected_gt = user_assessment
+                
+                # Apply flip logic for criteria that change meaning (negation, antonyms)
+                if should_flip_label(name):
+                    expected_gt = "unacceptable" if expected_gt == "acceptable" else "acceptable"
 
                 validity = "approved" if (
                     (ai_assessment == "pass" and expected_gt == "acceptable") or

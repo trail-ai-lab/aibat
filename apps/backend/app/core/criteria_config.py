@@ -8,7 +8,7 @@ Centralized configuration for criteria/perturbation types and prompts
 DEFAULT_CRITERIA_CONFIGS = {
     "AIBAT": ["spelling", "negation", "synonyms", "paraphrase", "acronyms", "antonyms", "spanish"],
     "Mini-AIBAT": ["spelling", "synonyms", "paraphrase", "acronyms", "spanish"],
-    "M-AIBAT": ["spanish", "spanglish", "english", "nouns", "spelling", "cognates", "dialect", "loan_word"],
+    "M-AIBAT": ["spelling", "spanish", "spanglish", "english", "nouns", "cognates", "dialect", "loan_word"],
     "Large-AIBAT": ["spelling", "negation", "synonyms", "paraphrase", "acronyms", "antonyms", "spanish", "spanglish", "english", "nouns", "cognates", "dialect", "loan_word", "colloquial"]
 }
 

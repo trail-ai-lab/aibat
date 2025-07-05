@@ -233,44 +233,72 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
   {
     accessorKey: "your_assessment",
     header: "Your Assessment",
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
       const isChildRow = !!row.original.parent_id;
       const assessment = row.original.your_assessment;
       const testId = row.original.id;
       
+      // For child rows (perturbations), check parent assessment status
+      if (isChildRow) {
+        const parentId = row.original.parent_id;
+        const allRows = (table.options.data as z.infer<typeof schema>[]) || [];
+        const parentRow = allRows.find(r => r.id === parentId && !r.parent_id);
+        
+        // If parent is ungraded, show perturbation as ungraded
+        if (parentRow?.your_assessment === "ungraded") {
+          return (
+            <Badge variant="outline" className="px-1.5 text-gray-600 border-gray-200">
+              Ungraded
+            </Badge>
+          );
+        }
+        
+        // If parent is graded, show perturbation's ground_truth value
+        const groundTruth = row.original.ground_truth;
+        const badgeClass = groundTruth === "acceptable"
+          ? "px-1.5 text-green-600 border-green-200"
+          : "px-1.5 text-red-600 border-red-200";
+        const displayText = groundTruth === "acceptable" ? "Acceptable" : "Unacceptable";
+        
+        return (
+          <Badge variant="outline" className={badgeClass}>
+            {displayText}
+          </Badge>
+        );
+      }
+      
+      // For parent rows, use existing logic
       if (assessment === "ungraded") {
         return (
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="px-1.5 text-gray-600 border-gray-200">
               Ungraded
             </Badge>
-            {!isChildRow && (
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 hover:bg-green-50 text-green-600"
-                  onClick={() => onAssessmentChange?.(testId, "acceptable")}
-                  title="Mark as Acceptable"
-                >
-                  <IconCheck className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 hover:bg-red-50 text-red-600"
-                  onClick={() => onAssessmentChange?.(testId, "unacceptable")}
-                  title="Mark as Unacceptable"
-                >
-                  <IconX className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 hover:bg-green-50 text-green-600"
+                onClick={() => onAssessmentChange?.(testId, "acceptable")}
+                title="Mark as Acceptable"
+              >
+                <IconCheck className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 hover:bg-red-50 text-red-600"
+                onClick={() => onAssessmentChange?.(testId, "unacceptable")}
+                title="Mark as Unacceptable"
+              >
+                <IconX className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         );
       }
       
-      // For graded items, show the regular badge
+      // For graded parent items, show the regular badge
       const badgeClass = assessment === "acceptable"
         ? "px-1.5 text-green-600 border-green-200"
         : "px-1.5 text-red-600 border-red-200";
@@ -286,11 +314,56 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
   {
     accessorKey: "agreement",
     header: "Agreement",
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
+      const isChildRow = !!row.original.parent_id;
       const agreement = row.original.agreement;
       const aiAssessment = row.original.ai_assessment;
       const yourAssessment = row.original.your_assessment;
       
+      // For child rows (perturbations), handle agreement calculation differently
+      if (isChildRow) {
+        const parentId = row.original.parent_id;
+        const allRows = (table.options.data as z.infer<typeof schema>[]) || [];
+        const parentRow = allRows.find(r => r.id === parentId && !r.parent_id);
+        
+        // If parent is ungraded or AI is still grading, show pending
+        if (parentRow?.your_assessment === "ungraded" || aiAssessment === "grading") {
+          return (
+            <Badge
+              variant="outline"
+              className="px-1.5 text-gray-600 border-gray-200"
+            >
+              <IconLoader className="mr-1 h-3 w-3" />
+              Pending
+            </Badge>
+          );
+        }
+        
+        // For perturbations, compare AI assessment with ground_truth (which is shown as Your Assessment)
+        const groundTruth = row.original.ground_truth;
+        const aiResult = aiAssessment === "pass" ? "acceptable" : "unacceptable";
+        const isMatch = aiResult === groundTruth;
+        
+        return (
+          <Badge
+            variant="outline"
+            className={`px-1.5 ${
+              isMatch
+                ? "text-green-600 border-green-200"
+                : "text-orange-600 border-orange-200"
+            }`}
+          >
+            {isMatch ? (
+              <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400 mr-1" />
+            ) : (
+              <IconX className="mr-1 h-3 w-3" />
+            )}
+            {isMatch ? "Match" : "Mismatch"}
+          </Badge>
+        );
+      }
+      
+      // For parent rows, use existing logic
       // If AI is still grading or user hasn't assessed, show pending
       if (aiAssessment === "grading" || yourAssessment === "ungraded" || agreement === null) {
         return (
