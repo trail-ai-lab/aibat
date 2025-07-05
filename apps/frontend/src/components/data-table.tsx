@@ -29,7 +29,6 @@ import {
   IconCircleCheckFilled,
   IconDotsVertical,
   IconGripVertical,
-  IconLayoutColumns,
   IconLoader,
   IconPlus,
   IconSparkles,
@@ -43,6 +42,7 @@ import { ChartPieLabel } from "@/components/char-area-interactive"
 import { ChartTooltipDefault } from "@/components/chart-tooltip-default"
 import { AddStatementsForm } from "@/components/add-statements-form"
 import { GenerateStatementsForm } from "@/components/generate-statements-form"
+import { generatePerturbations, type PerturbationResponse } from "@/lib/api/tests"
 
 
 import {
@@ -60,7 +60,6 @@ import {
   useReactTable,
   VisibilityState,
 } from "@tanstack/react-table"
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
 import { toast } from "sonner"
 import { z } from "zod"
 
@@ -80,7 +79,6 @@ import {
 } from "@/components/ui/drawer"
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -95,7 +93,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
 import {
   Table,
   TableBody,
@@ -110,11 +107,6 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
 
 export const schema = z.object({
   id: z.string(),
@@ -131,6 +123,7 @@ export const schema = z.object({
   is_builtin: z.boolean().optional(),
   parent_id: z.string().optional(),
   criteria_text: z.string().optional(),
+  perturbation_type: z.string().optional(),
 })
 
 // Create a separate component for the drag handle
@@ -211,7 +204,6 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
     accessorKey: "ai_assessment",
     header: "AI Assessment",
     cell: ({ row }) => {
-      const isChildRow = !!row.original.parent_id;
       const assessment = row.original.ai_assessment;
       
       if (assessment === "grading") {
@@ -301,7 +293,6 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
     accessorKey: "agreement",
     header: "Agreement",
     cell: ({ row }) => {
-      const isChildRow = !!row.original.parent_id;
       const agreement = row.original.agreement;
       const aiAssessment = row.original.ai_assessment;
       const yourAssessment = row.original.your_assessment;
@@ -343,16 +334,26 @@ const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable
     header: "Criteria",
     cell: ({ row, table }) => {
       const isChildRow = !!row.original.parent_id;
-      const expandedRows = (table.options.meta as any)?.expandedRows || new Set();
+      const expandedRows = (table.options.meta as Record<string, unknown>)?.expandedRows as Set<string> || new Set();
       const isExpanded = expandedRows.has(row.original.id);
-      const toggleExpanded = (table.options.meta as any)?.toggleExpanded;
+      const toggleExpanded = (table.options.meta as Record<string, unknown>)?.toggleExpanded as ((id: string) => void) | undefined;
       
       if (isChildRow) {
         return (
-          <div className="pl-4 text-sm text-muted-foreground">
-            {row.original.criteria_text || "Criteria"}
+          <div className="pl-4">
+            <Badge variant="secondary" className="text-xs">
+              {row.original.perturbation_type || row.original.criteria_text || "Perturbation"}
+            </Badge>
           </div>
         );
+      }
+      
+      // Only show expand button if this row has perturbations
+      const hasChildRows = (table.options.meta as Record<string, unknown>)?.perturbations as Map<string, unknown> | undefined;
+      const hasChildRowsForThisRow = hasChildRows?.has(row.original.id) || false;
+      
+      if (!hasChildRowsForThisRow) {
+        return null;
       }
       
       return (
@@ -445,7 +446,7 @@ export function DataTable({
   const [data, setData] = React.useState(() => initialData)
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
+    React.useState<VisibilityState>({ criteria: false }) // Hide criteria column initially
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   )
@@ -456,6 +457,8 @@ export function DataTable({
   })
   const [isAddStatementsOpen, setIsAddStatementsOpen] = React.useState(false)
   const [isGenerateStatementsOpen, setIsGenerateStatementsOpen] = React.useState(false)
+  const [perturbations, setPerturbations] = React.useState<Map<string, PerturbationResponse[]>>(new Map())
+  const [isGeneratingPerturbations, setIsGeneratingPerturbations] = React.useState(false)
   const sortableId = React.useId()
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
@@ -475,19 +478,28 @@ export function DataTable({
     })
   }, [])
 
-  // Generate child rows for expanded parent rows
+  // Generate child rows for expanded parent rows using actual perturbations
   const generateChildRows = React.useCallback((parentRow: z.infer<typeof schema>) => {
     const childRows: z.infer<typeof schema>[] = []
-    for (let i = 1; i <= 5; i++) {
+    const parentPerturbations = perturbations.get(parentRow.id) || []
+    
+    parentPerturbations.forEach((perturbation) => {
       childRows.push({
         ...parentRow,
-        id: `${parentRow.id}-child-${i}`,
+        id: perturbation.id,
+        statement: perturbation.title,
         parent_id: parentRow.id,
-        criteria_text: `Criteria ${i}`,
+        criteria_text: perturbation.type,
+        perturbation_type: perturbation.type,
+        ai_assessment: perturbation.label,
+        ground_truth: perturbation.ground_truth,
+        your_assessment: "ungraded", // Perturbations start ungraded
+        agreement: null, // Will be calculated when user assesses
       })
-    }
+    })
+    
     return childRows
-  }, [])
+  }, [perturbations])
 
   const columns = React.useMemo(() => createColumns(onAssessmentChange), [onAssessmentChange])
 
@@ -530,15 +542,15 @@ export function DataTable({
       // Add parent row
       result.push(row.original)
       
-      // Add child rows if expanded
-      if (expandedRows.has(row.original.id)) {
+      // Add child rows if expanded and has perturbations
+      if (expandedRows.has(row.original.id) && perturbations.has(row.original.id)) {
         const childRows = generateChildRows(row.original)
         result.push(...childRows)
       }
     })
     
     return result
-  }, [parentTable.getRowModel().rows, expandedRows, generateChildRows])
+  }, [parentTable.getRowModel().rows, expandedRows, generateChildRows, perturbations])
 
   const dataIds = React.useMemo<UniqueIdentifier[]>(
     () => paginatedExpandedData?.map(({ id }) => id) || [],
@@ -566,6 +578,7 @@ export function DataTable({
     meta: {
       expandedRows,
       toggleExpanded,
+      perturbations,
     },
   })
 
@@ -596,6 +609,66 @@ export function DataTable({
   const handleGenerateStatementsSuccess = () => {
     // Refresh the data after successfully generating statements
     onDataRefresh?.()
+  }
+
+  const handleAnalyzeAIBehavior = async () => {
+    console.log("Analyze AI Behavior button clicked!")
+    console.log("Current topic:", currentTopic)
+    
+    if (!currentTopic) {
+      console.log("No topic selected")
+      toast.error("Please select a topic first")
+      return
+    }
+
+    const selectedRows = parentTable.getFilteredSelectedRowModel().rows
+    console.log("Selected rows:", selectedRows.length)
+    
+    if (selectedRows.length === 0) {
+      console.log("No rows selected")
+      toast.error("Please select at least one test statement")
+      return
+    }
+
+    console.log("Setting loading state...")
+    setIsGeneratingPerturbations(true)
+    
+    try {
+      const testIds = selectedRows.map(row => row.original.id)
+      console.log("Test IDs to generate perturbations for:", testIds)
+      
+      console.log("Calling generatePerturbations API...")
+      const result = await generatePerturbations({
+        topic: currentTopic,
+        test_ids: testIds
+      })
+      
+      console.log("API response:", result)
+
+      // Group perturbations by original test ID
+      const perturbationMap = new Map<string, PerturbationResponse[]>()
+      result.perturbations.forEach(perturbation => {
+        const originalId = perturbation.original_id
+        if (!perturbationMap.has(originalId)) {
+          perturbationMap.set(originalId, [])
+        }
+        perturbationMap.get(originalId)!.push(perturbation)
+      })
+
+      console.log("Perturbation map:", perturbationMap)
+      setPerturbations(perturbationMap)
+      
+      // Show the criteria column now that we have perturbations
+      setColumnVisibility(prev => ({ ...prev, criteria: true }))
+      
+      toast.success(`Generated ${result.perturbations.length} perturbations for ${selectedRows.length} test statements`)
+    } catch (error) {
+      console.error("Error generating perturbations:", error)
+      toast.error("Failed to generate perturbations. Please try again.")
+    } finally {
+      console.log("Clearing loading state...")
+      setIsGeneratingPerturbations(false)
+    }
   }
 
 
@@ -629,6 +702,22 @@ export function DataTable({
         </TabsList>
         <div className="flex items-center gap-2">
           <ModelSelector currentTopic={currentTopic} />
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!currentTopic || isGeneratingPerturbations}
+            onClick={handleAnalyzeAIBehavior}
+            title={!currentTopic ? "Select a topic to analyze AI behavior" : "Generate perturbations for selected test statements"}
+          >
+            {isGeneratingPerturbations ? (
+              <IconLoader className="animate-spin" />
+            ) : (
+              <IconTrendingUp />
+            )}
+            <span className="hidden lg:inline">
+              {isGeneratingPerturbations ? "Analyzing..." : "Analyze AI Behavior"}
+            </span>
+          </Button>
           <Drawer
             direction="bottom"
             open={isAddStatementsOpen}

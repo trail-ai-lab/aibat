@@ -34,9 +34,17 @@ class TestNewPertInput(BaseModel):
     test_case: str
     prompt: str
 
-@router.post("/generate/")
-def generate_perturbations(topic: str, tests: List[PerturbationInput], user=Depends(verify_firebase_token)):
-    return perturbations_service.generate_perturbations(user["uid"], topic, tests)
+class GeneratePerturbationsInput(BaseModel):
+    topic: str
+    test_ids: List[str]
+
+@router.post("/generate")
+def generate_perturbations(body: GeneratePerturbationsInput, user=Depends(verify_firebase_token)):
+    return perturbations_service.generate_perturbations_for_tests(user["uid"], body.topic, body.test_ids)
+
+@router.get("/topic/{topic}")
+def get_perturbations_by_topic(topic: str, user=Depends(verify_firebase_token)):
+    return perturbations_service.get_perturbations_by_topic(user["uid"], topic)
 
 
 @router.get("/")

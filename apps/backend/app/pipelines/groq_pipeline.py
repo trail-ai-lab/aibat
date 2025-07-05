@@ -63,7 +63,48 @@ class GroqPipeline:
 
 
     def custom_perturb(self, prompt: str) -> str:
-        return f"{self.model}: {prompt}"
+        """
+        Generate a perturbed version of text based on the given prompt
+        """
+        if not self.api_key:
+            raise ValueError("GROQ_API_KEY not found in environment variables")
+        
+        messages = [
+            {
+                "role": "system",
+                "content": "You are a text perturbation assistant. Apply the requested transformation to the given text. Only return the transformed text without any explanations or additional commentary."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "max_tokens": 150,
+            "temperature": 0.7,
+            "top_p": 0.9,
+        }
+
+        try:
+            response = requests.post(self.base_url, headers=headers, json=payload)
+            response.raise_for_status()
+            result = response.json()
+            perturbed_text = result["choices"][0]["message"]["content"].strip()
+            return perturbed_text
+        except requests.exceptions.RequestException as e:
+            print(f"Error calling Groq API for perturbation: {e}")
+            return prompt.split(": ", 1)[-1] if ": " in prompt else prompt  # Return original text as fallback
+        except (KeyError, IndexError) as e:
+            print(f"Error parsing Groq API response for perturbation: {e}")
+            return prompt.split(": ", 1)[-1] if ": " in prompt else prompt  # Return original text as fallback
     
     def generate(self, existing_statements: list, topic_prompt: str, criteria: str = "base", num_statements: int = 5) -> list:
         """
