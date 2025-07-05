@@ -1,4 +1,4 @@
-# app/services/views_service.py
+# app/services/onboard_service.py
 
 import os
 import pandas as pd
@@ -13,6 +13,29 @@ DEFAULT_TOPICS = {
     "CU5": "The sentence is acceptable if it contains the physics concept: The more mass, the more energy. If not, it is unacceptable. Here is the sentence:",
     "Food": "Does this sentence include a description of food and/or culture? Here is the sentence:"
 }
+
+def check_user_initialized(uid: str):
+    topics = list(_db.collection("users").document(uid).collection("topics").stream())
+    return {"initialized": len(topics) > 0}
+
+
+def ensure_user_onboarded(uid: str):
+    user_doc = _db.collection("users").document(uid).get()
+    user_data = user_doc.to_dict() if user_doc.exists else {}
+
+    if user_data.get("onboardingComplete"):
+        return {"message": "Already onboarded"}
+
+    # Run onboarding logic
+    init_user_data(uid)
+
+    # Mark onboarding complete
+    _db.collection("users").document(uid).set({
+        "onboardingComplete": True,
+        "onboarded_at": datetime.utcnow()
+    }, merge=True)
+
+    return {"message": "User onboarded"}
 
 
 def init_user_data(uid: str):
@@ -59,7 +82,3 @@ def init_user_data(uid: str):
 
     return {"message": "Default topics and tests initialized from CSV."}
 
-
-def check_user_initialized(uid: str):
-    topics = list(_db.collection("users").document(uid).collection("topics").stream())
-    return {"initialized": len(topics) > 0}

@@ -8,6 +8,9 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { toast } from "sonner"
+import { Loader2 } from "lucide-react"
+import { triggerOnboarding } from "@/lib/api/onboard"
 
 export function SignupForm({
   className,
@@ -17,20 +20,35 @@ export function SignupForm({
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+    setLoading(true)
+
     try {
-      await createUserWithEmailAndPassword(auth, email, password)
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      const token = await userCredential.user.getIdToken()
+      localStorage.setItem("token", token)
+
+      await triggerOnboarding()
+
       router.push("/dashboard")
     } catch (err: any) {
+      console.error("Signup error:", err)
+      toast.error(err.message || "Signup failed")
       setError(err.message)
+      setLoading(false)
     }
   }
 
   return (
-    <form onSubmit={handleSignup} className={cn("flex flex-col gap-6", className)} {...props}>
+    <form
+      onSubmit={handleSignup}
+      className={cn("flex flex-col gap-6", className)}
+      {...props}
+    >
       <div className="flex flex-col items-center gap-2 text-center">
         <h1 className="text-2xl font-bold">Create an account</h1>
         <p className="text-muted-foreground text-sm text-balance">
@@ -61,8 +79,15 @@ export function SignupForm({
           />
         </div>
         {error && <p className="text-sm text-red-500 text-center">{error}</p>}
-        <Button type="submit" className="w-full">
-          Sign Up
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? (
+            <span className="flex items-center justify-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Creating account...
+            </span>
+          ) : (
+            "Sign Up"
+          )}
         </Button>
       </div>
       <div className="text-center text-sm">

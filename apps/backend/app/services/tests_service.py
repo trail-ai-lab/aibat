@@ -64,7 +64,7 @@ def get_tests_by_topic_fast(topic: str, user_id: str = None) -> TopicTestsRespon
     """
     # Check if this is a built-in topic (has a prompt in DEFAULT_TOPICS)
     try:
-        from app.services.views_service import DEFAULT_TOPICS
+        from apps.backend.app.services.onboard_service import DEFAULT_TOPICS
         is_builtin_topic = topic in DEFAULT_TOPICS
     except ImportError:
         is_builtin_topic = topic in ["CU0", "CU5", "Food"]
@@ -211,7 +211,7 @@ def get_tests_by_topic(topic: str, user_id: str = None) -> TopicTestsResponse:
     """
     # Check if this is a built-in topic (has a prompt in DEFAULT_TOPICS)
     try:
-        from app.services.views_service import DEFAULT_TOPICS
+        from apps.backend.app.services.onboard_service import DEFAULT_TOPICS
         is_builtin_topic = topic in DEFAULT_TOPICS
     except ImportError:
         is_builtin_topic = topic in ["CU0", "CU5", "Food"]
@@ -376,7 +376,7 @@ def get_tests_by_topic(topic: str, user_id: str = None) -> TopicTestsResponse:
     # Get the topic prompt for grading
     topic_prompt = None
     try:
-        from app.services.views_service import DEFAULT_TOPICS
+        from apps.backend.app.services.onboard_service import DEFAULT_TOPICS
         topic_prompt = DEFAULT_TOPICS.get(topic)
     except ImportError:
         pass
@@ -498,7 +498,7 @@ def get_available_topics(user_id: str = None) -> Dict[str, List[str]]:
     
     # Get built-in topics from DEFAULT_TOPICS (only topics with prompts)
     try:
-        from app.services.views_service import DEFAULT_TOPICS
+        from apps.backend.app.services.onboard_service import DEFAULT_TOPICS
         builtin_topics = list(DEFAULT_TOPICS.keys())
     except ImportError:
         # Fallback to hardcoded list if import fails
@@ -781,7 +781,7 @@ def grade_single_test(topic: str, test_id: str, user_id: str = None) -> dict:
         # Get the topic prompt
         topic_prompt = None
         try:
-            from app.services.views_service import DEFAULT_TOPICS
+            from apps.backend.app.services.onboard_service import DEFAULT_TOPICS
             topic_prompt = DEFAULT_TOPICS.get(topic)
         except ImportError:
             pass
@@ -802,7 +802,7 @@ def grade_single_test(topic: str, test_id: str, user_id: str = None) -> dict:
         
         # Check if this is a built-in topic
         try:
-            from app.services.views_service import DEFAULT_TOPICS
+            from apps.backend.app.services.onboard_service import DEFAULT_TOPICS
             is_builtin_topic = topic in DEFAULT_TOPICS
         except ImportError:
             is_builtin_topic = topic in ["CU0", "CU5", "Food"]
@@ -905,7 +905,7 @@ def update_test_assessment_with_agreement(user_id: str, test_id: str, assessment
             
             # Check if this is a built-in topic
             try:
-                from app.services.views_service import DEFAULT_TOPICS
+                from apps.backend.app.services.onboard_service import DEFAULT_TOPICS
                 is_builtin_topic = topic in DEFAULT_TOPICS
             except ImportError:
                 is_builtin_topic = topic in ["CU0", "CU5", "Food"]
@@ -980,7 +980,7 @@ def generate_statements_for_topic(user_id: str, generation_data: dict) -> dict:
         
         # Check if this is a built-in topic
         try:
-            from app.services.views_service import DEFAULT_TOPICS
+            from apps.backend.app.services.onboard_service import DEFAULT_TOPICS
             if topic_name in DEFAULT_TOPICS:
                 topic_prompt = DEFAULT_TOPICS[topic_name]
                 is_builtin_topic = True
