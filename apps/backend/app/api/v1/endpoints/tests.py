@@ -174,3 +174,14 @@ def clear_topic_cache(
         return tests_service.clear_topic_cache(user["uid"], topic_name, model_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/topics/generate-statements")
+def generate_statements_for_topic(generation_data: dict, user=Depends(verify_firebase_token)):
+    """
+    Generate new statements for an existing topic using AI
+    """
+    try:
+        return tests_service.generate_statements_for_topic(user["uid"], generation_data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

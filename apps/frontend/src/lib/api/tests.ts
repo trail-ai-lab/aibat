@@ -44,6 +44,26 @@ export interface AddStatementsRequest {
   }>
 }
 
+export interface GenerateStatementsRequest {
+  topic: string
+  criteria?: string
+  num_statements?: number
+}
+
+export interface GenerateStatementsResponse {
+  message: string
+  topic: string
+  criteria: string
+  generated_count: number
+  statements: Array<{
+    id: string
+    statement: string
+    ground_truth: "acceptable" | "unacceptable"
+    your_assessment: "ungraded" | "acceptable" | "unacceptable"
+    ai_assessment: "pass" | "fail" | "grading"
+  }>
+}
+
 export async function fetchTestsByTopic(topic: string): Promise<TopicTestsResponse> {
   const user = getAuth().currentUser
   if (!user) throw new Error("User not authenticated")
@@ -149,6 +169,29 @@ export async function createTopic(topicData: CreateTopicRequest): Promise<{ mess
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}))
     throw new Error(errorData.detail || "Failed to create topic")
+  }
+
+  return await res.json()
+}
+
+export async function generateStatementsForTopic(generationData: GenerateStatementsRequest): Promise<GenerateStatementsResponse> {
+  const user = getAuth().currentUser
+  if (!user) throw new Error("User not authenticated")
+
+  const token = await user.getIdToken()
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/tests/topics/generate-statements`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(generationData)
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.detail || "Failed to generate statements")
   }
 
   return await res.json()
