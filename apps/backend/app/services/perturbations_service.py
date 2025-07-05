@@ -105,7 +105,10 @@ def generate_perturbations(uid: str, topic: str, test_ids: list, batch_size: int
                     (ai_assessment == "fail" and expected_gt == "unacceptable")
                 ) else "denied"
 
-                pert_id = uuid4().hex
+                # Create a deterministic ID based on original_id and type to avoid duplicates
+                # This ensures each test+criteria combination has only one perturbation
+                pert_id = f"{test.id}_{name}".replace(" ", "_").replace("-", "_").lower()
+                
                 perturbation = {
                     "id": pert_id,
                     "original_id": test.id,
@@ -117,6 +120,7 @@ def generate_perturbations(uid: str, topic: str, test_ids: list, batch_size: int
                     "validity": validity
                 }
 
+                # Use set() to upsert - this will overwrite if the document already exists
                 _db.collection("users").document(uid).collection("perturbations").document(pert_id).set(perturbation)
                 log_action(uid, "generate_perturbation", perturbation)
                 results.append(perturbation)
@@ -125,3 +129,30 @@ def generate_perturbations(uid: str, topic: str, test_ids: list, batch_size: int
 
     except Exception as e:
         raise Exception(f"Error generating perturbations: {str(e)}")
+
+
+def get_perturbations_by_topic(uid: str, topic: str):
+    """
+    Fetch all perturbations for a specific topic and user.
+    Returns perturbations grouped by original test ID.
+    """
+    if not FIREBASE_AVAILABLE:
+        raise Exception("Firebase dependencies not available")
+
+    try:
+        # Query perturbations collection for the user and topic
+        perturbations_ref = _db.collection("users").document(uid).collection("perturbations")
+        query = perturbations_ref.where("topic", "==", topic)
+        
+        perturbations_docs = query.get()
+        
+        perturbations = []
+        for doc in perturbations_docs:
+            perturbation_data = doc.to_dict()
+            perturbation_data["id"] = doc.id
+            perturbations.append(perturbation_data)
+        
+        return {"perturbations": perturbations}
+    
+    except Exception as e:
+        raise Exception(f"Error fetching perturbations: {str(e)}")

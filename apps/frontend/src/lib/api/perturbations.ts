@@ -45,3 +45,25 @@ export async function generatePerturbations(perturbationData: GeneratePerturbati
 
   return await res.json()
 }
+
+export async function fetchPerturbationsByTopic(topic: string): Promise<GeneratePerturbationsResponse> {
+  const user = getAuth().currentUser
+  if (!user) throw new Error("User not authenticated")
+
+  const token = await user.getIdToken()
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/perturbations/topic/${encodeURIComponent(topic)}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.detail || "Failed to fetch perturbations")
+  }
+
+  return await res.json()
+}

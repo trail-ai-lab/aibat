@@ -503,17 +503,21 @@ export function DataTable({
   onAssessmentChange,
   currentTopic,
   onDataRefresh,
+  cachedPerturbations,
+  onPerturbationsUpdate,
 }: {
   data: z.infer<typeof schema>[]
   onAssessmentChange?: (id: string, assessment: "acceptable" | "unacceptable") => void
   currentTopic?: string
   onDataRefresh?: () => void
+  cachedPerturbations?: Map<string, PerturbationResponse[]>
+  onPerturbationsUpdate?: (newPerturbations: Map<string, PerturbationResponse[]>) => void
 }) {
   const [expandedRows, setExpandedRows] = React.useState<Set<string>>(new Set())
   const [data, setData] = React.useState(() => initialData)
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({ criteria: false }) // Hide criteria column initially
+    React.useState<VisibilityState>({ criteria: !!(cachedPerturbations && cachedPerturbations.size > 0) }) // Show criteria column if cached perturbations exist
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   )
@@ -533,6 +537,17 @@ export function DataTable({
     useSensor(TouchSensor, {}),
     useSensor(KeyboardSensor, {})
   )
+
+  // Update perturbations when cached perturbations change
+  React.useEffect(() => {
+    if (cachedPerturbations) {
+      setPerturbations(cachedPerturbations)
+      // Show criteria column if we have cached perturbations
+      if (cachedPerturbations.size > 0) {
+        setColumnVisibility(prev => ({ ...prev, criteria: true }))
+      }
+    }
+  }, [cachedPerturbations])
 
   const toggleExpanded = React.useCallback((rowId: string) => {
     setExpandedRows(prev => {
@@ -705,7 +720,30 @@ export function DataTable({
           selectedTestIds={parentTable.getFilteredSelectedRowModel().rows.map(row => row.original.id)}
           isGeneratingPerturbations={isGeneratingPerturbations}
           onGeneratingChange={setIsGeneratingPerturbations}
-          onPerturbationsGenerated={setPerturbations}
+          onPerturbationsGenerated={(newPerturbations) => {
+            setPerturbations(prev => {
+              const updated = new Map(prev)
+              newPerturbations.forEach((perturbationList, originalId) => {
+                if (updated.has(originalId)) {
+                  // Replace existing perturbations with new ones, using type as key to avoid duplicates
+                  const existing = updated.get(originalId)!
+                  const existingByType = new Map(existing.map(p => [p.type, p]))
+                  
+                  // Update or add new perturbations
+                  perturbationList.forEach(newPert => {
+                    existingByType.set(newPert.type, newPert)
+                  })
+                  
+                  updated.set(originalId, Array.from(existingByType.values()))
+                } else {
+                  updated.set(originalId, perturbationList)
+                }
+              })
+              return updated
+            })
+            // Also update the parent component if callback is provided
+            onPerturbationsUpdate?.(newPerturbations)
+          }}
           onShowCriteriaColumn={() => setColumnVisibility(prev => ({ ...prev, criteria: true }))}
           isCriteriaEditorOpen={isCriteriaEditorOpen}
           onCriteriaEditorOpenChange={setIsCriteriaEditorOpen}

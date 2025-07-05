@@ -18,3 +18,11 @@ def generate_perturbations(body: GeneratePerturbationsInput, user=Depends(verify
     The backend fetches the user's criteria configuration for the topic and applies each selected type.
     """
     return perturbations_service.generate_perturbations(user["uid"], body.topic, body.test_ids)
+
+@router.get("/topic/{topic}")
+def get_perturbations_by_topic(topic: str, user=Depends(verify_firebase_token)):
+    """
+    Fetch all perturbations for a specific topic.
+    Returns all cached perturbations that were previously generated for the topic.
+    """
+    return perturbations_service.get_perturbations_by_topic(user["uid"], topic)
