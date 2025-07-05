@@ -116,7 +116,7 @@ def get_tests_by_topic_fast(topic: str, user_id: str = None) -> TopicTestsRespon
                             topic=topic,
                             statement=statement,
                             ground_truth=ground_truth if ground_truth in ['acceptable', 'unacceptable'] else 'acceptable',
-                            your_assessment=ground_truth if ground_truth in ['acceptable', 'unacceptable'] else 'acceptable',  # For user-created topics, use their ground truth as their assessment
+                            your_assessment="ungraded" if data.get('labeler') == 'ai_generated' else (ground_truth if ground_truth in ['acceptable', 'unacceptable'] else 'acceptable'),  # AI-generated statements are ungraded, user-added use ground truth
                             ai_assessment=ai_assessment_raw,
                             agreement=agreement,
                             labeler=data.get('labeler', 'user'),
@@ -325,7 +325,7 @@ def get_tests_by_topic(topic: str, user_id: str = None) -> TopicTestsResponse:
                             topic=topic,
                             statement=statement,
                             ground_truth=ground_truth if ground_truth in ['acceptable', 'unacceptable'] else 'acceptable',
-                            your_assessment=ground_truth if ground_truth in ['acceptable', 'unacceptable'] else 'acceptable',  # For user-created topics, use their ground truth as their assessment
+                            your_assessment="ungraded" if data.get('labeler') == 'ai_generated' else (ground_truth if ground_truth in ['acceptable', 'unacceptable'] else 'acceptable'),  # AI-generated statements are ungraded, user-added use ground truth
                             ai_assessment=ai_assessment_raw if ai_assessment_raw in ['pass', 'fail', 'grading'] else 'grading',
                             agreement=agreement,
                             labeler=data.get('labeler', 'user'),
@@ -987,6 +987,13 @@ def generate_statements_for_topic(user_id: str, generation_data: dict) -> dict:
         except ImportError:
             if topic_name in ["CU0", "CU5", "Food"]:
                 is_builtin_topic = True
+                # Fallback prompts for built-in topics
+                fallback_prompts = {
+                    "CU0": "Does the following contain the physics concept: Greater height means greater energy? Here is the sentence:",
+                    "CU5": "The sentence is acceptable if it contains the physics concept: The more mass, the more energy. If not, it is unacceptable. Here is the sentence:",
+                    "Food": "Does this sentence include a description of food and/or culture? Here is the sentence:"
+                }
+                topic_prompt = fallback_prompts.get(topic_name)
         
         if not is_builtin_topic:
             # For user-created topics, get prompt from Firestore
