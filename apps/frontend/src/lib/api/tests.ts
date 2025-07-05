@@ -234,6 +234,7 @@ export interface PerturbationResponse {
 export interface GeneratePerturbationsRequest {
   topic: string
   test_ids: string[]
+  criteria_types?: string[]
 }
 
 export interface GeneratePerturbationsResponse {
@@ -283,4 +284,194 @@ export async function getPerturbationsByTopic(topic: string): Promise<Perturbati
   }
 
   return await res.json()
+}
+
+export interface CriteriaType {
+  name: string
+  is_custom: boolean
+  is_default: boolean
+}
+
+export interface CriteriaInfo {
+  name: string
+  prompt: string
+  flip_label: boolean
+}
+
+export interface AddCustomCriteriaRequest {
+  name: string
+  prompt: string
+  flip_label: boolean
+}
+
+export interface TestCriteriaPromptRequest {
+  prompt: string
+  test_case: string
+}
+
+export interface TestCriteriaPromptResponse {
+  perturbed: string
+}
+
+export async function getAllPerturbationTypes(): Promise<CriteriaType[]> {
+  const user = getAuth().currentUser
+  if (!user) throw new Error("User not authenticated")
+
+  const token = await user.getIdToken()
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/perturbations/criteria/types`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.detail || "Failed to fetch criteria types")
+  }
+
+  const data = await res.json()
+  return data.criteria_types || []
+}
+
+export async function getPerturbationInfo(criteriaName: string): Promise<CriteriaInfo> {
+  const user = getAuth().currentUser
+  if (!user) throw new Error("User not authenticated")
+
+  const token = await user.getIdToken()
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/perturbations/criteria/info/${encodeURIComponent(criteriaName)}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.detail || "Failed to fetch criteria info")
+  }
+
+  return await res.json()
+}
+
+export async function addCustomPerturbation(criteriaData: AddCustomCriteriaRequest): Promise<{ message: string }> {
+  const user = getAuth().currentUser
+  if (!user) throw new Error("User not authenticated")
+
+  const token = await user.getIdToken()
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/perturbations/criteria/add`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      pert_name: criteriaData.name,
+      prompt: criteriaData.prompt,
+      flip_label: criteriaData.flip_label,
+      test_list: []
+    })
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.detail || "Failed to add custom criteria")
+  }
+
+  return await res.json()
+}
+
+export async function editPerturbation(criteriaData: AddCustomCriteriaRequest): Promise<{ message: string }> {
+  const user = getAuth().currentUser
+  if (!user) throw new Error("User not authenticated")
+
+  const token = await user.getIdToken()
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/perturbations/criteria/edit`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      pert_name: criteriaData.name,
+      prompt: criteriaData.prompt,
+      flip_label: criteriaData.flip_label,
+      test_list: []
+    })
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.detail || "Failed to edit criteria")
+  }
+
+  return await res.json()
+}
+
+export async function deletePerturbationType(criteriaName: string): Promise<{ message: string }> {
+  const user = getAuth().currentUser
+  if (!user) throw new Error("User not authenticated")
+
+  const token = await user.getIdToken()
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/perturbations/criteria/delete/${encodeURIComponent(criteriaName)}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.detail || "Failed to delete criteria")
+  }
+
+  return await res.json()
+}
+
+export async function testNewPerturbation(testData: TestCriteriaPromptRequest): Promise<TestCriteriaPromptResponse> {
+  const user = getAuth().currentUser
+  if (!user) throw new Error("User not authenticated")
+
+  const token = await user.getIdToken()
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/perturbations/criteria/test`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      prompt: testData.prompt,
+      test_case: testData.test_case
+    })
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.detail || "Failed to test criteria prompt")
+  }
+
+  return await res.json()
+}
+
+export async function getDefaultPerturbations(config: string): Promise<string[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/perturbations/defaults/${encodeURIComponent(config)}`, {
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.detail || "Failed to fetch default criteria")
+  }
+
+  const data = await res.json()
+  return data.default_types || []
 }

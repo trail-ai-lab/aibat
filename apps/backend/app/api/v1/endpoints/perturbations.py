@@ -37,10 +37,11 @@ class TestNewPertInput(BaseModel):
 class GeneratePerturbationsInput(BaseModel):
     topic: str
     test_ids: List[str]
+    criteria_types: List[str] = None
 
 @router.post("/generate")
 def generate_perturbations(body: GeneratePerturbationsInput, user=Depends(verify_firebase_token)):
-    return perturbations_service.generate_perturbations_for_tests(user["uid"], body.topic, body.test_ids)
+    return perturbations_service.generate_perturbations_for_tests(user["uid"], body.topic, body.test_ids, body.criteria_types)
 
 @router.get("/topic/{topic}")
 def get_perturbations_by_topic(topic: str, user=Depends(verify_firebase_token)):
@@ -96,3 +97,49 @@ def get_perturbation_type(pert_type: str, user=Depends(verify_firebase_token)):
 @router.get("/defaults/{config}")
 def get_default_perturbations(config: str):
     return perturbations_service.get_default_perturbations(config)
+
+
+@router.get("/criteria/types")
+def get_all_criteria_types(user=Depends(verify_firebase_token)):
+    """Get all available criteria types (default + custom) for the user"""
+    return perturbations_service.get_all_criteria_types(user["uid"])
+
+
+@router.get("/criteria/info/{criteria_name}")
+def get_criteria_info(criteria_name: str, user=Depends(verify_firebase_token)):
+    """Get information about a specific criteria type"""
+    return perturbations_service.get_criteria_info(user["uid"], criteria_name)
+
+
+@router.post("/criteria/add")
+def add_custom_criteria(body: CustomPerturbationInput, user=Depends(verify_firebase_token)):
+    """Add a new custom criteria type"""
+    return perturbations_service.add_custom_criteria(
+        user["uid"],
+        name=body.pert_name,
+        prompt=body.prompt,
+        flip_label=body.flip_label
+    )
+
+
+@router.put("/criteria/edit")
+def edit_criteria(body: CustomPerturbationInput, user=Depends(verify_firebase_token)):
+    """Edit an existing custom criteria type"""
+    return perturbations_service.edit_custom_criteria(
+        user["uid"],
+        name=body.pert_name,
+        prompt=body.prompt,
+        flip_label=body.flip_label
+    )
+
+
+@router.delete("/criteria/delete/{criteria_name}")
+def delete_criteria(criteria_name: str, user=Depends(verify_firebase_token)):
+    """Delete a custom criteria type"""
+    return perturbations_service.delete_custom_criteria(user["uid"], criteria_name)
+
+
+@router.post("/criteria/test")
+def test_criteria_prompt(body: TestNewPertInput, user=Depends(verify_firebase_token)):
+    """Test a criteria prompt on a sample text"""
+    return perturbations_service.test_new_perturbation(user["uid"], body.prompt, body.test_case)

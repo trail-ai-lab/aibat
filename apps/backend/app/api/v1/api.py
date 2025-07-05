@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.api.v1.endpoints import topics, auth, models, views, tests, perturbations
+from app.api.v1.endpoints import topics, auth, models, views, tests, perturbations, criteria
 from app.core.firebase_auth import verify_firebase_token
 
 api_router = APIRouter()
@@ -14,5 +14,6 @@ protected_router.include_router(models.router, prefix="/models", tags=["models"]
 protected_router.include_router(views.router, prefix="/views", tags=["views"])
 protected_router.include_router(tests.router, prefix="/tests", tags=["tests"])
 protected_router.include_router(perturbations.router, prefix="/perturbations", tags=["perturbations"])
+protected_router.include_router(criteria.router, prefix="/criteria", tags=["criteria"])
 
 api_router.include_router(protected_router)

@@ -36,12 +36,14 @@ import {
   IconCheck,
   IconX,
   IconChevronUp,
+  IconSettings,
 } from "@tabler/icons-react"
 import { ModelSelector } from "@/components/model-selector"
 import { ChartPieLabel } from "@/components/char-area-interactive"
 import { ChartTooltipDefault } from "@/components/chart-tooltip-default"
 import { AddStatementsForm } from "@/components/add-statements-form"
 import { GenerateStatementsForm } from "@/components/generate-statements-form"
+import { CriteriaEditor } from "@/components/criteria-editor"
 import { generatePerturbations, type PerturbationResponse } from "@/lib/api/tests"
 
 
@@ -457,6 +459,7 @@ export function DataTable({
   })
   const [isAddStatementsOpen, setIsAddStatementsOpen] = React.useState(false)
   const [isGenerateStatementsOpen, setIsGenerateStatementsOpen] = React.useState(false)
+  const [isCriteriaEditorOpen, setIsCriteriaEditorOpen] = React.useState(false)
   const [perturbations, setPerturbations] = React.useState<Map<string, PerturbationResponse[]>>(new Map())
   const [isGeneratingPerturbations, setIsGeneratingPerturbations] = React.useState(false)
   const sortableId = React.useId()
@@ -702,6 +705,36 @@ export function DataTable({
         </TabsList>
         <div className="flex items-center gap-2">
           <ModelSelector currentTopic={currentTopic} />
+          <Drawer
+            direction="bottom"
+            open={isCriteriaEditorOpen}
+            onOpenChange={setIsCriteriaEditorOpen}
+          >
+            <DrawerTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                title="Manage criteria for perturbations"
+              >
+                <IconSettings />
+                <span className="hidden lg:inline">Criteria</span>
+              </Button>
+            </DrawerTrigger>
+            <DrawerContent>
+              <DrawerHeader className="gap-1">
+                <DrawerTitle>Criteria Management</DrawerTitle>
+                <DrawerDescription>
+                  Manage perturbation criteria types for generating test variations
+                </DrawerDescription>
+              </DrawerHeader>
+              <div className="flex flex-col gap-4 overflow-y-auto px-4">
+                <CriteriaEditor
+                  onClose={() => setIsCriteriaEditorOpen(false)}
+                  currentTopic={currentTopic}
+                />
+              </div>
+            </DrawerContent>
+          </Drawer>
           <Button
             variant="outline"
             size="sm"
