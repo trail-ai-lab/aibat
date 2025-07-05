@@ -44,7 +44,7 @@ import { ChartTooltipDefault } from "@/components/chart-tooltip-default"
 import { AddStatementsForm } from "@/components/add-statements-form"
 import { GenerateStatementsForm } from "@/components/generate-statements-form"
 import { CriteriaEditor } from "@/components/criteria-editor"
-import { generatePerturbations, type PerturbationResponse } from "@/lib/api/tests"
+import { generatePerturbations, type PerturbationResponse } from "@/lib/api/perturbations"
 
 
 import {
