@@ -18,7 +18,6 @@ export function useTests(topic?: string, modelId?: string) {
 
     // Prevent duplicate calls for the same topic
     if (lastFetchRef.current === topicName && !forceRefresh) {
-      console.log(`🚫 Skipping duplicate fetch for topic: ${topicName}`)
       return
     }
 
@@ -108,3 +107,5 @@ export function useTests(topic?: string, modelId?: string) {
     clearTests,
   }
 }
+
+export { TestResponse }

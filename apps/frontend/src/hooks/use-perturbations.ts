@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { fetchPerturbationsByTopic, type PerturbationResponse } from "@/lib/api/perturbations"
+import { fetchPerturbationsByTopic } from "@/lib/api/perturbations"
+import { PerturbationResponse } from "@/types/perturbations"
 
 export function usePerturbations(topic?: string) {
   const [perturbations, setPerturbations] = useState<Map<string, PerturbationResponse[]>>(new Map())
@@ -19,6 +20,7 @@ export function usePerturbations(topic?: string) {
       
       // Group perturbations by original test ID
       const perturbationMap = new Map<string, PerturbationResponse[]>()
+
       response.perturbations.forEach(perturbation => {
         const originalId = perturbation.original_id
         if (!perturbationMap.has(originalId)) {
@@ -26,8 +28,9 @@ export function usePerturbations(topic?: string) {
         }
         perturbationMap.get(originalId)!.push(perturbation)
       })
-      
+
       setPerturbations(perturbationMap)
+
     } catch (err) {
       console.error("Error fetching perturbations:", err)
       setError(err instanceof Error ? err.message : "Failed to fetch perturbations")

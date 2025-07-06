@@ -4,6 +4,17 @@ from app.services.assessment_cache_service import cache_multiple_assessments
 from datetime import datetime
 from uuid import uuid4
 
+def get_tests_by_topic(user_id: str, topic: str):
+    ref = db.collection("users").document(user_id).collection("tests").where("topic", "==", topic)
+    docs = ref.stream()
+
+    tests = []
+    for doc in docs:
+        data = doc.to_dict()
+        data["id"] = doc.id
+        tests.append(data)
+    return {"topic": topic, "test_count": len(tests), "tests": tests}
+
 # Add multiple test statements to an existing topic
 def add_tests(user_id: str, topic: str, tests: list[dict]):
     ref = db.collection("users").document(user_id).collection("tests")

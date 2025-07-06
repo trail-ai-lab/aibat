@@ -71,7 +71,6 @@ export async function fetchTestsByTopic(topic: string): Promise<TopicTestsRespon
 
   const token = await user.getIdToken()
   const url = `${API_BASE_URL}/api/v1/tests/topic/${encodeURIComponent(topic)}`
-  console.log(`🔗 Making fetch request to: ${url}`)
 
   const res = await fetch(url, {
     headers: {
@@ -80,16 +79,13 @@ export async function fetchTestsByTopic(topic: string): Promise<TopicTestsRespon
     },
   })
 
-  console.log(`📊 Response status: ${res.status} ${res.statusText} for topic: ${topic}`)
 
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}))
-    console.log(`💥 API Error for topic ${topic}:`, errorData)
     throw new Error(errorData.detail || `Failed to fetch tests for topic ${topic}`)
   }
 
   const data = await res.json()
-  console.log(`✨ Successfully fetched ${data.tests?.length || 0} tests for topic: ${topic}`)
   return data
 }
 
