@@ -4,16 +4,11 @@ import { API_BASE_URL } from "@/lib/api"
 export interface TestResponse {
   id: string
   topic: string
-  statement: string
-  ground_truth: "acceptable" | "unacceptable"
-  your_assessment: "ungraded" | "acceptable" | "unacceptable"
-  ai_assessment: "pass" | "fail"
-  agreement: boolean
-  labeler: string
-  description?: string
-  author?: string
-  model_score?: string
-  is_builtin?: boolean
+  title: string  // formerly 'statement'
+  ground_truth: "acceptable" | "unacceptable" | "ungraded"
+  label: "acceptable" | "unacceptable" | "ungraded" // maps to ai_assessment
+  validity?: string // e.g., "approved" or null/undefined
+  created_at?: string
 }
 
 export interface TopicTestsResponse {

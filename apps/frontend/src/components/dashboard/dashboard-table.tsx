@@ -1,14 +1,15 @@
 // components/dashboard/dashboard-table.tsx
 import { IconLoader, IconDatabase } from "@tabler/icons-react"
-import { DataTable } from "@/components/data-table"
-import { TestResponse } from "@/hooks/use-tests"
+import { DataTable } from "@/components/data-table/data-table"
 import { PerturbationResponse } from "@/types/perturbations"
+import { z } from "zod"
+import { schema } from "../data-table/schema"
 
 interface Props {
   topic: string | null
   loading: boolean
   error: string | null
-  data: TestResponse[]
+  data: z.infer<typeof schema>[]
   onAssessmentChange: (testId: string, value: "acceptable" | "unacceptable") => void
   onDataRefresh: () => void
   cachedPerturbations: Map<string, PerturbationResponse[]>

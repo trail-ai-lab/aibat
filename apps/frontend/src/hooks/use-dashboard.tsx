@@ -9,27 +9,15 @@ export function useDashboard(selectedModel: string | undefined) {
 
   const { topics, refreshTopics, selectTopic, loading: topicsLoading } = useTopics()
 
+  // 🟡 Use `useTests` only if topic is selected
   const {
     tests,
     loading,
     error,
     totalTests,
     currentTopic,
-    fetchTests,
-    clearTests,
-    currentModelId
-  } = selectedTopic
-    ? useTests(selectedTopic, selectedModel)
-    : {
-        tests: [],
-        loading: false,
-        error: null,
-        totalTests: 0,
-        currentTopic: null,
-        fetchTests: () => {},
-        clearTests: () => {},
-        currentModelId: null,
-      }
+    fetchTests
+  } = useTests(selectedTopic || undefined, selectedModel)
 
   const handleTopicSelect = useCallback((topic: string) => {
     setSelectedTopic(topic)

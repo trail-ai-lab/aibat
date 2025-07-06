@@ -38,27 +38,38 @@ export default function Page() {
     handleTopicSelect,
     handleTopicCreated,
   } = useDashboard(selectedModel)
+  console.log(tests)
 
   const { perturbations, addPerturbations } = usePerturbations(currentTopic || undefined)
 
   const tableData = useMemo(
-    () =>
-      tests.map(test => ({
+  () =>
+    tests
+      .map(test => ({
         id: test.id,
-        statement: test.statement,
-        ground_truth: test.ground_truth,
-        your_assessment: test.your_assessment,
-        ai_assessment: test.ai_assessment,
-        agreement: test.agreement,
+        statement: test.title,
+        ground_truth: test.ground_truth as "acceptable" | "unacceptable",
+        your_assessment: test.ground_truth as "acceptable" | "unacceptable" | "ungraded", // until your backend supports it
+        ai_assessment: test.label === "acceptable" ? "pass" as const :
+                       test.label === "unacceptable" ? "fail" as const :
+                       "grading" as const,
+        agreement: test.validity === "approved" ? true :
+                   test.validity === null || test.validity === undefined ? null :
+                   false,
         topic: test.topic,
-        labeler: test.labeler,
-        description: test.description,
-        author: test.author,
-        model_score: test.model_score,
-        is_builtin: test.is_builtin,
+        labeler: "ai_generated",
+        description: "", // can update if available
+        author: "",
+        model_score: "",
+        is_builtin: false,
+        parent_id: undefined,
+        criteria_text: undefined,
+        perturbation_type: undefined
       })),
-    [tests]
-  )
+  [tests]
+)
+
+  console.log(tableData)
 
   const handleAssessmentChange = async (testId: string, assessment: "acceptable" | "unacceptable") => {
     try {
