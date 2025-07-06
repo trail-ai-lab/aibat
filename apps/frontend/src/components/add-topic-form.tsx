@@ -113,10 +113,6 @@ export function AddTopicForm({ onClose, onSuccess }: AddTopicFormProps) {
 
   return (
     <div className="w-full flex flex-col max-h-[80vh] overflow-y-auto">
-      {/* Header */}
-      <div className="text-2xl p-4 font-light w-full text-center border-b">
-        Add New Topic
-      </div>
 
       <div className="flex flex-col items-center justify-center h-full">
         <div className="px-8 py-6 mb-4 w-full space-y-6">

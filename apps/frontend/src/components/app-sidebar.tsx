@@ -49,6 +49,7 @@ export function AppSidebar({
   onTopicSelect,
   onCreateTopic,
   onDeleteTopic,
+  onEditTopic,
   selectedTopic,
   topics,
   loading,
@@ -56,7 +57,8 @@ export function AppSidebar({
 }: React.ComponentProps<typeof Sidebar> & {
   onTopicSelect?: (topic: string) => void
   onCreateTopic?: () => void
-  onDeleteTopic?: (topic: string) => void // ✅ added
+  onDeleteTopic?: (topic: string) => void
+  onEditTopic?: (oldName: string, newName: string, prompt: string) => Promise<void>
   selectedTopic?: string | null
   topics: Topic[]
   loading: boolean
@@ -85,6 +87,7 @@ export function AppSidebar({
           onTopicSelect={onTopicSelect}
           selectedTopic={selectedTopic}
           onDeleteTopic={onDeleteTopic}
+          onEditTopic={onEditTopic}
         />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>

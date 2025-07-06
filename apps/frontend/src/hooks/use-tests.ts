@@ -9,7 +9,6 @@ export function useTests(topic?: string, modelId?: string) {
   const [error, setError] = useState<string | null>(null)
   const [currentTopic, setCurrentTopic] = useState<string | null>(null)
   const [currentModelId, setCurrentModelId] = useState<string | null>(null)
-  const [totalTests, setTotalTests] = useState(0)
 
   const lastFetchRef = useRef<string | null>(null)
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -31,13 +30,11 @@ export function useTests(topic?: string, modelId?: string) {
       console.log(`✅ API call successful for topic: ${topicName}`)
       console.log(response.tests)
       setTests(response.tests)
-      setTotalTests(response.total_tests)
       setCurrentTopic(topicName)
     } catch (err) {
       console.error(`❌ Error fetching tests for topic ${topicName}:`, err)
       setError(err instanceof Error ? err.message : "Failed to fetch tests")
       setTests([])
-      setTotalTests(0)
       lastFetchRef.current = null
     } finally {
       setLoading(false)
@@ -48,7 +45,6 @@ export function useTests(topic?: string, modelId?: string) {
     setTests([])
     setCurrentTopic(null)
     setCurrentModelId(null)
-    setTotalTests(0)
     setError(null)
   }
 
@@ -80,7 +76,6 @@ export function useTests(topic?: string, modelId?: string) {
     error,
     currentTopic,
     currentModelId,
-    totalTests,
     fetchTests,
     clearTests,
   }

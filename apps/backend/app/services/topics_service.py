@@ -58,6 +58,48 @@ def get_topics(uid: str):
         for doc in docs
     ]
 
+def edit_topic(uid: str, old_topic: str, new_topic: str, new_prompt: str):
+    user_ref = _db.collection("users").document(uid)
+
+    old_topic_ref = user_ref.collection("topics").document(old_topic)
+    old_doc = old_topic_ref.get()
+
+    if not old_doc.exists:
+        raise Exception(f"Topic '{old_topic}' not found")
+
+    data = old_doc.to_dict()
+    data["prompt"] = new_prompt
+    data["updated_at"] = datetime.utcnow()
+    data["name"] = new_topic
+
+    # If name hasn't changed, just update the prompt
+    if old_topic == new_topic:
+        old_topic_ref.update({"prompt": new_prompt, "updated_at": datetime.utcnow()})
+        return {"message": f"Updated prompt for topic '{old_topic}'"}
+
+    # Rename logic: create new doc, move references, delete old
+    new_topic_ref = user_ref.collection("topics").document(new_topic)
+    new_topic_ref.set(data)
+
+    # Copy tests
+    tests = user_ref.collection("tests").where("topic", "==", old_topic).stream()
+    for doc in tests:
+        test_data = doc.to_dict()
+        test_data["topic"] = new_topic
+        user_ref.collection("tests").document(doc.id).set(test_data)
+
+    # Copy perturbations
+    perturbations = user_ref.collection("perturbations").where("topic", "==", old_topic).stream()
+    for doc in perturbations:
+        pert_data = doc.to_dict()
+        pert_data["topic"] = new_topic
+        user_ref.collection("perturbations").document(doc.id).set(pert_data)
+
+    # Delete old topic
+    old_topic_ref.delete()
+
+    return {"message": f"Renamed topic from '{old_topic}' to '{new_topic}' and updated prompt."}
+
 
 def test_prompt(uid: str, prompt: str, test: str):
     pipeline = get_model_pipeline(uid)

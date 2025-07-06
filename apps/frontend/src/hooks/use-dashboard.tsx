@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useTests } from "./use-tests"
-import { fetchTopics, deleteTopic as deleteTopicAPI } from "@/lib/api/topics"
+import { fetchTopics, deleteTopic as deleteTopicAPI, editTopic as editTopicAPI } from "@/lib/api/topics"
 import { Topic, TopicResponse } from "@/types/topics"
 
 export function useDashboard(selectedModel: string | undefined) {
@@ -16,7 +16,6 @@ export function useDashboard(selectedModel: string | undefined) {
     tests,
     loading,
     error,
-    totalTests,
     currentTopic,
     fetchTests
   } = useTests(selectedTopic || undefined, selectedModel)
@@ -77,6 +76,21 @@ export function useDashboard(selectedModel: string | undefined) {
     }
   }
 
+  const handleTopicEdit = async (oldName: string, newName: string, newPrompt: string) => {
+    try {
+        await editTopicAPI(oldName, newName, newPrompt)
+        await refreshTopics()
+
+        if (selectedTopic === oldName) {
+        setSelectedTopic(newName)
+        localStorage.setItem("selectedTopic", newName)
+        }
+    } catch (err) {
+        console.error("Failed to edit topic:", err)
+        throw err
+    }
+    }
+
   // Restore selected topic from localStorage on load
   useEffect(() => {
     if (!topics.length) return
@@ -104,13 +118,13 @@ export function useDashboard(selectedModel: string | undefined) {
     tests,
     loading,
     error,
-    totalTests,
     currentTopic,
     topics,
     topicsLoading,
     handleTopicSelect,
     handleTopicCreated,
     handleTopicDelete, 
+    handleTopicEdit,
     refreshTopics,
   }
 }

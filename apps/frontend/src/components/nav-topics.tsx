@@ -4,9 +4,9 @@
 
 import {
   IconDots,
-  IconFolder,
   IconTrash,
   IconDatabase,
+  IconPencil,
 } from "@tabler/icons-react"
 import {
   DropdownMenu,
@@ -24,22 +24,59 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerClose,
+} from "@/components/ui/drawer"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Topic } from "@/types/topics"
 import { toast } from "sonner"
+import { useState } from "react"
 
 export function NavTopics({
   topics,
   onTopicSelect,
   selectedTopic,
-  onDeleteTopic, // (topicName: string) => void
+  onDeleteTopic,
+  onEditTopic,
 }: {
   topics: Topic[]
   onTopicSelect?: (topic: string) => void
   selectedTopic?: string | null
   onDeleteTopic?: (topicName: string) => void
+  onEditTopic?: (oldName: string, newName: string, prompt: string) => Promise<void>
 }) {
   const { isMobile } = useSidebar()
+
+  const [editingTopic, setEditingTopic] = useState<Topic | null>(null)
+  const [newName, setNewName] = useState("")
+  const [newPrompt, setNewPrompt] = useState("")
+
+  const openEditDrawer = (topic: Topic) => {
+    setEditingTopic(topic)
+    setNewName(topic.name)
+    setNewPrompt(topic.prompt)
+  }
+
+  const handleEditSave = async () => {
+    if (!editingTopic || !onEditTopic) return
+    try {
+      await onEditTopic(editingTopic.name, newName, newPrompt)
+      toast.success(`Updated topic: ${newName}`)
+      setEditingTopic(null)
+    } catch (err) {
+      console.error(err)
+      toast.error("Failed to update topic")
+    }
+  }
 
   const handleDelete = async (topic: Topic) => {
     try {
@@ -89,20 +126,20 @@ export function NavTopics({
             </SidebarMenuAction>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-24 rounded-lg"
+            className="w-32 rounded-lg"
             side={isMobile ? "bottom" : "right"}
             align={isMobile ? "end" : "start"}
           >
-            <DropdownMenuItem>
-              <IconFolder />
-              <span>Rename</span>
+            <DropdownMenuItem onClick={() => openEditDrawer(topic)}>
+              <IconPencil />
+              <span>Edit</span>
             </DropdownMenuItem>
             {!topic.isBuiltin && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   variant="destructive"
-                  onClick={() => handleDelete(topic)} // ✅ triggers passed-in prop
+                  onClick={() => handleDelete(topic)}
                 >
                   <IconTrash />
                   <span>Delete</span>
@@ -116,17 +153,55 @@ export function NavTopics({
   }
 
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel>Topics</SidebarGroupLabel>
-      <SidebarMenu>
-        {topics.length > 0 ? (
-          topics.map(renderItem)
-        ) : (
-          <SidebarMenuItem>
-            <SidebarMenuButton disabled>No topics found</SidebarMenuButton>
-          </SidebarMenuItem>
-        )}
-      </SidebarMenu>
-    </SidebarGroup>
+    <>
+      <SidebarGroup>
+        <SidebarGroupLabel>Topics</SidebarGroupLabel>
+        <SidebarMenu>
+          {topics.length > 0 ? (
+            topics.map(renderItem)
+          ) : (
+            <SidebarMenuItem>
+              <SidebarMenuButton disabled>No topics found</SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
+        </SidebarMenu>
+      </SidebarGroup>
+
+      {/* 🔽 Edit Drawer */}
+      <Drawer open={!!editingTopic} onOpenChange={(open) => !open && setEditingTopic(null)}>
+        <DrawerContent>
+          <div className="mx-auto w-full max-w-sm">
+          <DrawerHeader>
+            <DrawerTitle>Edit Topic</DrawerTitle>
+            <DrawerDescription>Update the topic name and prompt.</DrawerDescription>
+          </DrawerHeader>
+          <div className="grid gap-4 px-4 py-2">
+            <div className="grid w-full max-w-sm items-center gap-3">
+              <Label htmlFor="topic-name">Topic Name</Label>
+              <Input
+                id="topic-name"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+              />
+            </div>
+            <div className="grid w-full max-w-sm items-center gap-3">
+              <Label htmlFor="topic-prompt">Prompt</Label>
+              <Input
+                id="topic-prompt"
+                value={newPrompt}
+                onChange={(e) => setNewPrompt(e.target.value)}
+              />
+            </div>
+          </div>
+          <DrawerFooter>
+            <Button onClick={handleEditSave}>Save Changes</Button>
+            <DrawerClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DrawerClose>
+          </DrawerFooter>
+          </div>
+        </DrawerContent>
+      </Drawer>
+    </>
   )
 }

@@ -1,3 +1,5 @@
+// apps/frontend/src/app/(protected)/dashboard/page.tsx
+
 "use client"
 
 import { useMemo, useState } from "react"
@@ -33,11 +35,11 @@ export default function Page() {
     tests,
     loading,
     error,
-    totalTests,
     currentTopic,
     handleTopicSelect,
     handleTopicCreated,
     handleTopicDelete,
+    handleTopicEdit,
   } = useDashboard(selectedModel)
 
   const { perturbations, addPerturbations } = usePerturbations(currentTopic || undefined)
@@ -94,15 +96,16 @@ export default function Page() {
         topics={topics}
         loading={topicsLoading}
         onDeleteTopic={handleTopicDelete}
+        onEditTopic={handleTopicEdit}
       />
       <SidebarInset>
-        <SiteHeader />
+        <SiteHeader topicName={currentTopic ?? undefined} />
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               <DashboardHeader
                 topic={currentTopic}
-                totalTests={totalTests}
+                totalTests={tests.length}
                 topicPrompt={topicPrompt}
               />
 
@@ -124,14 +127,14 @@ export default function Page() {
       </SidebarInset>
 
       <Drawer open={isCreateTopicOpen} onOpenChange={setIsCreateTopicOpen}>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader>
-            <DrawerTitle>Create New Topic</DrawerTitle>
-          </DrawerHeader>
-          <AddTopicForm
-            onClose={() => setIsCreateTopicOpen(false)}
-            onSuccess={handleTopicCreated}
-          />
+        <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>Create New Topic</DrawerTitle>
+            </DrawerHeader>
+            <AddTopicForm
+              onClose={() => setIsCreateTopicOpen(false)}
+              onSuccess={handleTopicCreated}
+            />
         </DrawerContent>
       </Drawer>
     </SidebarProvider>

@@ -76,3 +76,26 @@ export async function deleteTopic(topic: string): Promise<{ message: string }> {
 
   return await res.json()
 }
+
+export async function editTopic(oldTopic: string, newTopic: string, prompt: string): Promise<{ message: string }> {
+  const user = getAuth().currentUser
+  if (!user) throw new Error("User not authenticated")
+
+  const token = await user.getIdToken()
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/topics/edit`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ old_topic: oldTopic, new_topic: newTopic, prompt })
+  })
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}))
+    throw new Error(error.detail || "Failed to edit topic")
+  }
+
+  return await res.json()
+}

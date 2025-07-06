@@ -13,7 +13,6 @@ export interface TestResponse {
 
 export interface TopicTestsResponse {
   topic: string
-  total_tests: number
   tests: TestResponse[]
 }
 
