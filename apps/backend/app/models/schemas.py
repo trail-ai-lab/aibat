@@ -1,41 +1,92 @@
 from pydantic import BaseModel
-from typing import Optional, Literal
+from typing import List, Optional, Literal
+
+
+# ----------- Topic Management -----------
+
+class TopicTestInput(BaseModel):
+    test: str
+    ground_truth: str
+
+class AddTopicInput(BaseModel):
+    topic: str
+    prompt_topic: str
+    tests: List[TopicTestInput]
+    default: bool = False
+
+class DeleteTopicInput(BaseModel):
+    topic: str
+
+class TestPromptInput(BaseModel):
+    prompt: str
+    test: str
+
+
+# ----------- Test Management -----------
+
+class TestStatement(BaseModel):
+    title: str
+    ground_truth: str
+
+class AddTestsRequest(BaseModel):
+    topic: str
+    tests: List[TestStatement]
+
+class DeleteTestsRequest(BaseModel):
+    test_ids: List[str]
+
+class GradeTestsRequest(BaseModel):
+    test_ids: List[str]
+
+class EditTestRequest(BaseModel):
+    id: str
+    title: Optional[str] = None
+    ground_truth: Optional[str] = None
+
+class EditTestsRequest(BaseModel):
+    tests: List[EditTestRequest]
+
+class AssessmentInput(BaseModel):
+    test_id: str
+    assessment: Literal["acceptable", "unacceptable"]
+
+
+# ----------- Core Data Models -----------
 
 class TestSample(BaseModel):
-    """Model for individual test samples"""
     id: Optional[str] = None
     topic: str
-    input: str  # The test sentence/statement
-    output: Literal["acceptable", "unacceptable"]  # Ground truth
-    label: Literal["pass", "fail"]  # AI assessment result
+    input: str
+    output: Literal["acceptable", "unacceptable"]
+    label: Literal["pass", "fail"]
     labeler: str = "adatest_default"
     description: Optional[str] = ""
     author: Optional[str] = ""
     model_score: Optional[str] = ""
 
+
 class TestResponse(BaseModel):
-    """Response model for test data"""
     id: str
     topic: str
-    statement: str  # The input field renamed for frontend clarity
+    statement: str
     ground_truth: Literal["acceptable", "unacceptable"]
     your_assessment: Literal["ungraded", "acceptable", "unacceptable"]
     ai_assessment: Literal["pass", "fail", "grading"]
-    agreement: Optional[bool] = None  # Whether AI assessment matches ground truth
+    agreement: Optional[bool] = None
     labeler: str
     description: Optional[str] = ""
     author: Optional[str] = ""
     model_score: Optional[str] = ""
     is_builtin: Optional[bool] = False
 
+
 class TopicTestsResponse(BaseModel):
-    """Response model for topic-specific tests"""
     topic: str
     total_tests: int
-    tests: list[TestResponse]
+    tests: List[TestResponse]
+
 
 class CachedAssessment(BaseModel):
-    """Model for cached AI assessments"""
     id: Optional[str] = None
     user_id: str
     topic: str

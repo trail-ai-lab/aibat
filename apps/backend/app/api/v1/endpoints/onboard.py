@@ -6,6 +6,6 @@ from app.services import onboard_service
 
 router = APIRouter()
 
-@router.get("/")
+@router.get("")
 def onboard(user=Depends(verify_firebase_token)):
     return onboard_service.ensure_user_onboarded(user["uid"])

@@ -1,187 +1,46 @@
-from fastapi import APIRouter, HTTPException, Request, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import List
 from app.core.firebase_auth import verify_firebase_token
 from app.services import tests_service
-from app.models.schemas import TopicTestsResponse
+from app.models.schemas import (
+    AddTestsRequest,
+    DeleteTestsRequest,
+    GradeTestsRequest,
+    EditTestsRequest,
+    AssessmentInput
+)
 
 router = APIRouter()
 
-
-class TestInput(BaseModel):
-    title: str
-    topic: str
-    label: str
+@router.post("/add")
+def add_tests(payload: AddTestsRequest, user=Depends(verify_firebase_token)):
+    return tests_service.add_tests(user["uid"], payload.topic, payload.tests)
 
 
-@router.get("/", response_model=List[dict])
-def list_tests(user=Depends(verify_firebase_token)):
-    return tests_service.get_all_tests(user["uid"])
+@router.delete("/delete")
+def delete_tests(payload: DeleteTestsRequest, user=Depends(verify_firebase_token)):
+    return tests_service.delete_tests(user["uid"], payload.test_ids)
 
 
-@router.get("/topic/{topic_name}", response_model=TopicTestsResponse)
-def get_tests_by_topic(topic_name: str, user=Depends(verify_firebase_token)):
-    """
-    Get all tests for a specific topic from CSV files or Firestore
-    """
+@router.post("/grade")
+def grade_tests(payload: GradeTestsRequest, user=Depends(verify_firebase_token)):
+    return tests_service.grade_tests(user["uid"], payload.test_ids)
+
+
+@router.put("/edit")
+def edit_tests(payload: EditTestsRequest, user=Depends(verify_firebase_token)):
+    return tests_service.edit_tests(user["uid"], payload.tests)
+
+
+@router.post("/assess")
+def add_assessment(payload: AssessmentInput, user=Depends(verify_firebase_token)):
     try:
-        return tests_service.get_tests_by_topic(topic_name, user["uid"])
-    except FileNotFoundError:
-        available_topics = tests_service.get_available_topics(user["uid"])
-        all_topics = available_topics["builtin"] + available_topics["user_created"]
-        raise HTTPException(
-            status_code=404,
-            detail=f"No tests found for topic '{topic_name}'. Available topics: {all_topics}"
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/topic/{topic_name}/fast", response_model=TopicTestsResponse)
-def get_tests_by_topic_fast(topic_name: str, user=Depends(verify_firebase_token)):
-    """
-    Get all tests for a specific topic quickly without AI grading
-    Returns tests with 'grading' status for AI assessment
-    """
-    try:
-        return tests_service.get_tests_by_topic_fast(topic_name, user["uid"])
-    except FileNotFoundError:
-        available_topics = tests_service.get_available_topics(user["uid"])
-        all_topics = available_topics["builtin"] + available_topics["user_created"]
-        raise HTTPException(
-            status_code=404,
-            detail=f"No tests found for topic '{topic_name}'. Available topics: {all_topics}"
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return tests_service.add_assessment(user["uid"], payload.test_id, payload.assessment)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/topics/available")
-def get_available_topics(user=Depends(verify_firebase_token)):
-    """
-    Get list of available topics from both CSV files and Firestore
-    """
-    return tests_service.get_available_topics(user["uid"])
-
-
-@router.post("/topics/create")
-def create_topic(topic_data: dict, user=Depends(verify_firebase_token)):
-    """
-    Create a new topic with tests in Firestore
-    """
-    try:
-        return tests_service.create_topic(user["uid"], topic_data)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/topics/add-statements")
-def add_statements_to_topic(statements_data: dict, user=Depends(verify_firebase_token)):
-    """
-    Add new statements to an existing topic in Firestore
-    """
-    try:
-        return tests_service.add_statements_to_topic(user["uid"], statements_data)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/add/")
-def add_test(test: TestInput, user=Depends(verify_firebase_token)):
-    success = tests_service.add_test(user["uid"], test)
-    if not success:
-        raise HTTPException(status_code=400, detail="Test already exists or error occurred")
-    return {"status": "success"}
-
-
-@router.post("/clear/")
-def clear_tests(user=Depends(verify_firebase_token)):
-    tests_service.clear_tests(user["uid"])
-    return {"status": "cleared"}
-
-
-@router.post("/grade/")
-def grade_test(test: TestInput, user=Depends(verify_firebase_token)):
-    result = tests_service.grade_test(user["uid"], test)
-    return {"label": result}
-
-
-
-
-@router.post("/grade/{topic_name}/{test_id}")
-def grade_single_test(
-    topic_name: str,
-    test_id: str,
-    user=Depends(verify_firebase_token)
-):
-    """
-    Grade a single test statement and return the AI assessment
-    """
-    try:
-        result = tests_service.grade_single_test(topic_name, test_id, user["uid"])
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.put("/assessment/{test_id}/optimized")
-def update_test_assessment_optimized(
-    test_id: str,
-    assessment_data: dict,
-    user=Depends(verify_firebase_token)
-):
-    """
-    Update the assessment for a specific test with optimized agreement calculation
-    """
-    try:
-        return tests_service.update_test_assessment_with_agreement(user["uid"], test_id, assessment_data)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-@router.get("/log/")
+@router.get("/logs")
 def get_logs(user=Depends(verify_firebase_token)):
-    logs = tests_service.get_logs(user["uid"])
-    return {"logs": logs}
-
-
-@router.put("/assessment/{test_id}")
-def update_test_assessment(
-    test_id: str,
-    assessment_data: dict,
-    user=Depends(verify_firebase_token)
-):
-    """
-    Update the assessment for a specific test
-    """
-    try:
-        return tests_service.update_test_assessment(user["uid"], test_id, assessment_data)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/cache/clear/{topic_name}")
-def clear_topic_cache(
-    topic_name: str,
-    cache_data: dict,
-    user=Depends(verify_firebase_token)
-):
-    """
-    Clear cached assessments for a specific topic and model combination
-    """
-    try:
-        model_id = cache_data.get("model_id")
-        if not model_id:
-            raise HTTPException(status_code=400, detail="model_id is required")
-        
-        return tests_service.clear_topic_cache(user["uid"], topic_name, model_id)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/topics/generate-statements")
-def generate_statements_for_topic(generation_data: dict, user=Depends(verify_firebase_token)):
-    """
-    Generate new statements for an existing topic using AI
-    """
-    try:
-        return tests_service.generate_statements_for_topic(user["uid"], generation_data)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return tests_service.get_logs(user["uid"])
