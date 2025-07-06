@@ -1,3 +1,5 @@
+// apps/frontend/src/components/app-sidebar.tsx
+
 "use client"
 
 import * as React from "react"
@@ -21,7 +23,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import type { Topic } from "@/hooks/use-topics"
+import { Topic } from "@/types/topics"
 
 const data = {
   navSecondary: [
@@ -46,6 +48,7 @@ const data = {
 export function AppSidebar({
   onTopicSelect,
   onCreateTopic,
+  onDeleteTopic,
   selectedTopic,
   topics,
   loading,
@@ -53,6 +56,7 @@ export function AppSidebar({
 }: React.ComponentProps<typeof Sidebar> & {
   onTopicSelect?: (topic: string) => void
   onCreateTopic?: () => void
+  onDeleteTopic?: (topic: string) => void // ✅ added
   selectedTopic?: string | null
   topics: Topic[]
   loading: boolean
@@ -80,6 +84,7 @@ export function AppSidebar({
           topics={topics}
           onTopicSelect={onTopicSelect}
           selectedTopic={selectedTopic}
+          onDeleteTopic={onDeleteTopic}
         />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>

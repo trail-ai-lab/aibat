@@ -1,9 +1,10 @@
+// apps/frontend/src/components/nav-topics.tsx
+
 "use client"
 
 import {
   IconDots,
   IconFolder,
-  IconShare3,
   IconTrash,
   IconDatabase,
 } from "@tabler/icons-react"
@@ -24,18 +25,31 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { Badge } from "@/components/ui/badge"
-import type { Topic } from "@/hooks/use-topics"
+import { Topic } from "@/types/topics"
+import { toast } from "sonner"
 
 export function NavTopics({
   topics,
   onTopicSelect,
   selectedTopic,
+  onDeleteTopic, // (topicName: string) => void
 }: {
   topics: Topic[]
   onTopicSelect?: (topic: string) => void
   selectedTopic?: string | null
+  onDeleteTopic?: (topicName: string) => void
 }) {
   const { isMobile } = useSidebar()
+
+  const handleDelete = async (topic: Topic) => {
+    try {
+      await onDeleteTopic?.(topic.name)
+      toast.success(`Deleted topic: ${topic.name}`)
+    } catch (err) {
+      console.error(err)
+      toast.error(`Failed to delete topic: ${topic.name}`)
+    }
+  }
 
   const renderItem = (topic: Topic) => {
     const Icon = topic.icon || IconDatabase
@@ -81,16 +95,15 @@ export function NavTopics({
           >
             <DropdownMenuItem>
               <IconFolder />
-              <span>Open</span>
+              <span>Rename</span>
             </DropdownMenuItem>
             {!topic.isBuiltin && (
               <>
-                <DropdownMenuItem>
-                  <IconShare3 />
-                  <span>Share</span>
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive">
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => handleDelete(topic)} // ✅ triggers passed-in prop
+                >
                   <IconTrash />
                   <span>Delete</span>
                 </DropdownMenuItem>

@@ -32,10 +32,21 @@ def add_topic(uid: str, body):
     return {"message": "Topic and tests added successfully!"}
 
 def delete_topic(uid: str, topic: str):
+    # Delete the topic
     _db.collection("users").document(uid).collection("topics").document(topic).delete()
-    _db.collection("users").document(uid).collection("tests").where("topic", "==", topic).get()
-    _db.collection("users").document(uid).collection("perturbations").where("topic", "==", topic).get()
-    return {"message": "Topic deleted successfully!"}
+
+    # Delete related tests
+    tests = _db.collection("users").document(uid).collection("tests").where("topic", "==", topic).stream()
+    for doc in tests:
+        doc.reference.delete()
+
+    # Delete related perturbations
+    perturbations = _db.collection("users").document(uid).collection("perturbations").where("topic", "==", topic).stream()
+    for doc in perturbations:
+        doc.reference.delete()
+
+    return {"message": "Topic and associated data deleted successfully!"}
+
 
 def get_topics(uid: str):
     docs = _db.collection("users").document(uid).collection("topics").stream()

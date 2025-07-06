@@ -1,15 +1,17 @@
+// apps/frontend/src/hooks/use-dashboard.ts
+
 import { useState, useEffect, useCallback } from "react"
-import { useTopics } from "./use-topics"
 import { useTests } from "./use-tests"
+import { fetchTopics, deleteTopic as deleteTopicAPI } from "@/lib/api/topics"
+import { Topic, TopicResponse } from "@/types/topics"
 
 export function useDashboard(selectedModel: string | undefined) {
+  const [topics, setTopics] = useState<Topic[]>([])
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null)
   const [topicPrompt, setTopicPrompt] = useState<string | null>(null)
+  const [topicsLoading, setTopicsLoading] = useState<boolean>(true)
   const [pendingSelection, setPendingSelection] = useState<string | null>(null)
 
-  const { topics, refreshTopics, selectTopic, loading: topicsLoading } = useTopics()
-
-  // 🟡 Use `useTests` only if topic is selected
   const {
     tests,
     loading,
@@ -19,43 +21,82 @@ export function useDashboard(selectedModel: string | undefined) {
     fetchTests
   } = useTests(selectedTopic || undefined, selectedModel)
 
+  const refreshTopics = useCallback(async () => {
+    try {
+      setTopicsLoading(true)
+      const data: TopicResponse[] = await fetchTopics()
+      console.log(data)
+
+      const formatted: Topic[] = data.map((t) => ({
+        name: t.name,
+        url: `/topics/${encodeURIComponent(t.name)}`,
+        isBuiltin: t.default,
+        prompt: t.prompt,
+        testCount: t.test_count ?? 0,
+        createdAt: t.created_at ?? null,
+      }))
+
+      setTopics(formatted)
+
+      if (!selectedTopic && formatted.length > 0) {
+        const first = formatted[0].name
+        setSelectedTopic(first)
+        localStorage.setItem("selectedTopic", first)
+      }
+    } catch (error) {
+      console.error("Error refreshing topics:", error)
+    } finally {
+      setTopicsLoading(false)
+    }
+  }, [selectedTopic])
+
   const handleTopicSelect = useCallback((topic: string) => {
     setSelectedTopic(topic)
-    selectTopic(topic)
 
     const topicData = topics.find(t => t.name === topic)
     setTopicPrompt(topicData?.prompt || null)
-  }, [topics, selectTopic])
+    localStorage.setItem("selectedTopic", topic)
+  }, [topics])
 
   const handleTopicCreated = async (topicName: string) => {
     setPendingSelection(topicName)
     await refreshTopics()
   }
 
-  // Restore selected topic from localStorage
+  const handleTopicDelete = async (topicName: string) => {
+    try {
+      await deleteTopicAPI(topicName)
+      await refreshTopics()
+      if (selectedTopic === topicName) {
+        setSelectedTopic(null)
+        setTopicPrompt(null)
+        localStorage.removeItem("selectedTopic")
+      }
+    } catch (error) {
+      console.error("Failed to delete topic:", error)
+    }
+  }
+
+  // Restore selected topic from localStorage on load
   useEffect(() => {
+    if (!topics.length) return
     const saved = localStorage.getItem("selectedTopic")
     if (saved && topics.some(t => t.name === saved)) {
-      handleTopicSelect(saved)
+        handleTopicSelect(saved)
     }
-  }, [topics, handleTopicSelect])
+    }, [topics, handleTopicSelect])
 
-  // Store current topic to localStorage
-  useEffect(() => {
-    if (selectedTopic) {
-      localStorage.setItem("selectedTopic", selectedTopic)
-    } else {
-      localStorage.removeItem("selectedTopic")
-    }
-  }, [selectedTopic])
-
-  // After topic is created and refreshed
+  // Auto-select after creation
   useEffect(() => {
     if (pendingSelection && topics.some(t => t.name === pendingSelection)) {
       handleTopicSelect(pendingSelection)
       setPendingSelection(null)
     }
   }, [pendingSelection, topics, handleTopicSelect])
+
+  useEffect(() => {
+    refreshTopics()
+    }, [refreshTopics])
 
   return {
     selectedTopic,
@@ -69,6 +110,7 @@ export function useDashboard(selectedModel: string | undefined) {
     topicsLoading,
     handleTopicSelect,
     handleTopicCreated,
+    handleTopicDelete, 
     refreshTopics,
   }
 }

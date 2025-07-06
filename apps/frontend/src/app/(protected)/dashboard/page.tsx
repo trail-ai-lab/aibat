@@ -37,8 +37,8 @@ export default function Page() {
     currentTopic,
     handleTopicSelect,
     handleTopicCreated,
+    handleTopicDelete,
   } = useDashboard(selectedModel)
-  console.log(tests)
 
   const { perturbations, addPerturbations } = usePerturbations(currentTopic || undefined)
 
@@ -69,8 +69,6 @@ export default function Page() {
   [tests]
 )
 
-  console.log(tableData)
-
   const handleAssessmentChange = async (testId: string, assessment: "acceptable" | "unacceptable") => {
     try {
       await updateTestAssessment(testId, assessment)
@@ -95,6 +93,7 @@ export default function Page() {
         selectedTopic={selectedTopic}
         topics={topics}
         loading={topicsLoading}
+        onDeleteTopic={handleTopicDelete}
       />
       <SidebarInset>
         <SiteHeader />

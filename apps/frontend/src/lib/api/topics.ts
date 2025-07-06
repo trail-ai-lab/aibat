@@ -1,16 +1,9 @@
 import { getAuth } from "firebase/auth"
 import { API_BASE_URL } from "@/lib/api"
-
-export interface TopicData {
-  name: string
-  prompt: string
-  default: boolean
-  created_at?: string
-  test_count?: number
-}
+import { TopicResponse } from "@/types/topics"
 
 
-export async function fetchTopics(): Promise<TopicData[]> {
+export async function fetchTopics(): Promise<TopicResponse[]> {
   const user = getAuth().currentUser
   if (!user) throw new Error("User not authenticated")
 
