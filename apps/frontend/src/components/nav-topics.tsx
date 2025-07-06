@@ -1,6 +1,12 @@
 "use client"
 
-import { IconDots, IconFolder, IconShare3, IconTrash, IconDatabase } from "@tabler/icons-react"
+import {
+  IconDots,
+  IconFolder,
+  IconShare3,
+  IconTrash,
+  IconDatabase,
+} from "@tabler/icons-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,7 +29,7 @@ import type { Topic } from "@/hooks/use-topics"
 export function NavTopics({
   topics,
   onTopicSelect,
-  selectedTopic
+  selectedTopic,
 }: {
   topics: Topic[]
   onTopicSelect?: (topic: string) => void
@@ -34,15 +40,20 @@ export function NavTopics({
   const renderItem = (topic: Topic) => {
     const Icon = topic.icon || IconDatabase
     const isSelected = selectedTopic === topic.name
+
     return (
       <SidebarMenuItem key={topic.name}>
-        <SidebarMenuButton asChild isActive={isSelected}>
+        <SidebarMenuButton
+          asChild
+          isActive={isSelected}
+          className={isSelected ? "bg-accent text-accent-foreground hover:bg-accent/80" : ""}
+        >
           <button
             onClick={() => onTopicSelect?.(topic.name)}
-            className="flex items-center gap-2 w-full text-left justify-between"
+            className="flex items-center gap-2 w-full text-left justify-between px-2 py-1.5 rounded-md"
           >
             <div className="flex items-center gap-2">
-              <Icon />
+              <Icon className="size-4" />
               <span>{topic.name}</span>
             </div>
             {topic.isBuiltin && (
@@ -52,6 +63,7 @@ export function NavTopics({
             )}
           </button>
         </SidebarMenuButton>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuAction
