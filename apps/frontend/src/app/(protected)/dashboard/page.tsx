@@ -103,11 +103,7 @@ export default function Page() {
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              <DashboardHeader
-                topic={currentTopic}
-                totalTests={tests.length}
-                topicPrompt={topicPrompt}
-              />
+              
 
               <DashboardTable
                 topic={currentTopic}
@@ -118,6 +114,11 @@ export default function Page() {
                 onDataRefresh={() => currentTopic && handleTopicSelect(currentTopic)}
                 cachedPerturbations={perturbations}
                 onPerturbationsUpdate={addPerturbations}
+              />
+              <DashboardHeader
+                topic={currentTopic}
+                totalTests={tests.length}
+                topicPrompt={topicPrompt}
               />
 
               {!currentTopic && !loading && <DashboardEmpty />}

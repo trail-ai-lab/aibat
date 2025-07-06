@@ -100,3 +100,9 @@ class CachedAssessment(BaseModel):
     ai_assessment: Literal["pass", "fail"]
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
+
+
+# ----------- LLM Models Management -----------
+
+class ModelSelectInput(BaseModel):
+    id: str
