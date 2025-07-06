@@ -20,7 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import type { Topic } from "@/hooks/use-topics"
 
-export function NavDocuments({
+export function NavTopics({
   topics,
   onTopicSelect,
   selectedTopic

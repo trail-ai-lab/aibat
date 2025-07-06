@@ -31,53 +31,49 @@ export default function Page() {
   const [pendingTopicSelection, setPendingTopicSelection] = useState<string | null>(null)
   const { selectedModel } = useModels()
   const { tests, loading, error, currentTopic, totalTests, fetchTests } = useTests(undefined, selectedModel)
-  const { topics, refreshTopics } = useTopics()
+  const {
+    topics,
+    refreshTopics,
+    selectedTopic: selectedTopicGlobal,
+    selectTopic,
+    loading: topicsLoading,
+  } = useTopics()
   const { perturbations, loading: perturbationsLoading, addPerturbations } = usePerturbations(currentTopic || undefined)
 
   const handleTopicSelect = useCallback(async (topic: string) => {
     console.log(`🔄 handleTopicSelect called with topic: ${topic}`)
     setSelectedTopic(topic)
     fetchTests(topic)
-    
-    // Get topic prompt from the topics data
+    selectTopic(topic)
+
     const selectedTopicData = topics.find(t => t.name === topic)
     if (selectedTopicData) {
       setTopicPrompt(selectedTopicData.prompt)
     } else {
       setTopicPrompt(null)
     }
-  }, [fetchTests, topics])
+  }, [fetchTests, topics, selectTopic])
 
-  // Load selected topic from localStorage on mount - ONLY ONCE
   useEffect(() => {
-    console.log(`🚀 Dashboard useEffect: Loading saved topic from localStorage`)
     const savedTopic = localStorage.getItem('selectedTopic')
-    console.log(`💾 Saved topic from localStorage: ${savedTopic}`)
     if (savedTopic && !selectedTopic) {
-      console.log(`🎯 Setting selected topic to: ${savedTopic}`)
       setSelectedTopic(savedTopic)
-      // Only call handleTopicSelect if topics are loaded and the topic exists
       if (topics.length > 0 && topics.some(t => t.name === savedTopic)) {
         handleTopicSelect(savedTopic)
       } else if (topics.length > 0) {
-        // If saved topic doesn't exist, clear it from localStorage
-        console.log(`🗑️ Saved topic "${savedTopic}" not found in available topics, clearing localStorage`)
         localStorage.removeItem('selectedTopic')
         setSelectedTopic(null)
       }
     }
-  }, []) // Remove handleTopicSelect dependency to prevent infinite loop
+  }, [])
 
-  // Handle delayed topic selection when topics load after localStorage check
   useEffect(() => {
     const savedTopic = localStorage.getItem('selectedTopic')
     if (savedTopic && !selectedTopic && topics.length > 0 && topics.some(t => t.name === savedTopic)) {
-      console.log(`🔄 Topics loaded, now selecting saved topic: ${savedTopic}`)
       handleTopicSelect(savedTopic)
     }
   }, [topics, selectedTopic, handleTopicSelect])
 
-  // Save selected topic to localStorage whenever it changes
   useEffect(() => {
     if (selectedTopic) {
       localStorage.setItem('selectedTopic', selectedTopic)
@@ -86,7 +82,6 @@ export default function Page() {
     }
   }, [selectedTopic])
 
-  // Auto-select newly created topic when topics list updates
   useEffect(() => {
     if (pendingTopicSelection && topics.some(topic => topic.name === pendingTopicSelection)) {
       handleTopicSelect(pendingTopicSelection)
@@ -99,11 +94,10 @@ export default function Page() {
   }
 
   const handleTopicCreated = async (topicName: string) => {
-    setPendingTopicSelection(topicName) // Mark topic for auto-selection
-    await refreshTopics() // Refresh the topics list
+    setPendingTopicSelection(topicName)
+    await refreshTopics()
   }
 
-  // Transform tests data to match the data table schema
   const tableData = tests.map(test => ({
     id: test.id,
     statement: test.statement,
@@ -121,13 +115,8 @@ export default function Page() {
 
   const handleAssessmentChange = async (testId: string, assessment: "acceptable" | "unacceptable") => {
     try {
-      // Update the assessment via API
       await updateTestAssessment(testId, assessment)
-      
-      // Show success message
       toast.success(`Assessment updated to ${assessment}`)
-      
-      // Refresh the tests to show the change
       if (currentTopic) {
         await fetchTests(currentTopic)
       }
@@ -138,7 +127,6 @@ export default function Page() {
   }
 
   const handleDataRefresh = async () => {
-    // Refresh the tests data after adding new statements
     if (currentTopic) {
       await fetchTests(currentTopic)
     }
@@ -146,25 +134,24 @@ export default function Page() {
 
   return (
     <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 72)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        } as React.CSSProperties
-      }
+      style={{
+        "--sidebar-width": "calc(var(--spacing) * 72)",
+        "--header-height": "calc(var(--spacing) * 12)",
+      } as React.CSSProperties}
     >
       <AppSidebar
         variant="inset"
         onTopicSelect={handleTopicSelect}
         onCreateTopic={handleCreateTopic}
         selectedTopic={selectedTopic}
+        topics={topics}
+        loading={topicsLoading}
       />
       <SidebarInset>
         <SiteHeader />
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              {/* Topic Header */}
               <div className="flex items-center justify-between px-4 lg:px-6">
                 <div className="flex items-center gap-3">
                   <IconDatabase className="size-6" />
@@ -175,10 +162,8 @@ export default function Page() {
                     <p className="text-muted-foreground">
                       {currentTopic
                         ? `Showing ${totalTests} test statements for ${currentTopic}`
-                        : "Choose a topic from the sidebar to view test statements"
-                      }
+                        : "Choose a topic from the sidebar to view test statements"}
                     </p>
-                    {/* Topic Prompt */}
                     {currentTopic && topicPrompt && (
                       <div className="mt-3">
                         <div className="bg-muted/50 rounded-lg p-3 border-l-4 border-primary">
@@ -196,7 +181,6 @@ export default function Page() {
                 )}
               </div>
 
-              {/* Loading State */}
               {loading && (
                 <div className="flex items-center justify-center py-8">
                   <IconLoader className="size-6 animate-spin mr-2" />
@@ -204,7 +188,6 @@ export default function Page() {
                 </div>
               )}
 
-              {/* Error State */}
               {error && (
                 <div className="flex items-center justify-center py-8">
                   <div className="text-center">
@@ -214,7 +197,6 @@ export default function Page() {
                 </div>
               )}
 
-              {/* Data Table */}
               {!loading && !error && tableData.length > 0 && (
                 <DataTable
                   data={tableData}
@@ -226,7 +208,6 @@ export default function Page() {
                 />
               )}
 
-              {/* Empty State */}
               {!loading && !error && tableData.length === 0 && currentTopic && (
                 <div className="flex items-center justify-center py-8">
                   <div className="text-center">
@@ -239,7 +220,6 @@ export default function Page() {
                 </div>
               )}
 
-              {/* Initial State */}
               {!currentTopic && !loading && (
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
@@ -256,7 +236,6 @@ export default function Page() {
         </div>
       </SidebarInset>
 
-      {/* Create Topic Drawer */}
       <Drawer open={isCreateTopicOpen} onOpenChange={setIsCreateTopicOpen}>
         <DrawerContent className="max-h-[90vh]">
           <DrawerHeader>

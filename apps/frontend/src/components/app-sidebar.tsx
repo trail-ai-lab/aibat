@@ -2,24 +2,13 @@
 
 import * as React from "react"
 import {
-  IconCamera,
-  IconChartBar,
-  IconDashboard,
-  IconDatabase,
-  IconFileAi,
-  IconFileDescription,
-  IconFileWord,
-  IconFolder,
-  IconHelp,
-  IconInnerShadowTop,
-  IconListDetails,
-  IconReport,
-  IconSearch,
   IconSettings,
-  IconUsers,
+  IconHelp,
+  IconSearch,
+  IconInnerShadowTop,
 } from "@tabler/icons-react"
 
-import { NavDocuments } from "@/components/nav-topics"
+import { NavTopics } from "@/components/nav-topics"
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
@@ -32,7 +21,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { useTopics } from "@/hooks/use-topics"
+import type { Topic } from "@/hooks/use-topics"
 
 const data = {
   navSecondary: [
@@ -58,14 +47,16 @@ export function AppSidebar({
   onTopicSelect,
   onCreateTopic,
   selectedTopic,
+  topics,
+  loading,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   onTopicSelect?: (topic: string) => void
   onCreateTopic?: () => void
   selectedTopic?: string | null
+  topics: Topic[]
+  loading: boolean
 }) {
-    const { topics, loading } = useTopics()
-    console.log("Loaded topics:", topics, "Loading:", loading)
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -85,7 +76,7 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <NavMain onCreateTopic={onCreateTopic} />
-        <NavDocuments
+        <NavTopics
           topics={topics}
           onTopicSelect={onTopicSelect}
           selectedTopic={selectedTopic}

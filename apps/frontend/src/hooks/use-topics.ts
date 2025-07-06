@@ -10,6 +10,8 @@ export interface Topic {
   icon?: any
   isBuiltin: boolean
   prompt: string
+  createdAt?: string | null
+  testCount?: number
 }
 
 export function useTopics() {
@@ -34,8 +36,12 @@ export function useTopics() {
         url: `/topics/${encodeURIComponent(topicData.name)}`,
         isBuiltin: topicData.default,
         prompt: topicData.prompt,
+        testCount: topicData.test_count ?? 0,
+        createdAt: topicData.created_at ?? null,
       }))
 
+
+      console.log(formattedTopics)
       setTopics(formattedTopics)
 
       if (!selectedTopic && formattedTopics.length > 0) {

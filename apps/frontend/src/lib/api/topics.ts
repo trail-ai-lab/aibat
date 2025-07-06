@@ -5,8 +5,10 @@ export interface TopicData {
   name: string
   prompt: string
   default: boolean
-  created_at?: string | null
+  created_at?: string
+  test_count?: number
 }
+
 
 export async function fetchTopics(): Promise<TopicData[]> {
   const user = getAuth().currentUser
@@ -18,7 +20,12 @@ export async function fetchTopics(): Promise<TopicData[]> {
     headers: { Authorization: `Bearer ${token}` },
   })
 
-  if (!res.ok) throw new Error("Failed to fetch topics")
+  if (!res.ok) {
+    const error = await res.text()
+    console.error("Failed to fetch topics", res.status, error)
+    throw new Error("Failed to fetch topics")
+  }
+
 
   return await res.json()
 }

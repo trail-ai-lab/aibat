@@ -17,10 +17,12 @@ def add_topic(uid: str, body):
 
     # Save topic metadata in Firestore
     _db.collection("users").document(uid).collection("topics").document(topic).set({
+        "name": topic,
         "prompt": prompt,
         "default": is_default,
         "created_at": datetime.utcnow()
     })
+
 
     # Use shared logic to add test statements
     test_payload = [{"title": t.test, "ground_truth": t.ground_truth} for t in tests]
@@ -37,7 +39,14 @@ def delete_topic(uid: str, topic: str):
 
 def get_topics(uid: str):
     docs = _db.collection("users").document(uid).collection("topics").stream()
-    return [doc.id for doc in docs]
+    return [
+        {
+            "name": doc.id,
+            **doc.to_dict()
+        }
+        for doc in docs
+    ]
+
 
 def test_prompt(uid: str, prompt: str, test: str):
     pipeline = get_model_pipeline(uid)
