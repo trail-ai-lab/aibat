@@ -39,12 +39,6 @@ def get_topics(uid: str):
     docs = _db.collection("users").document(uid).collection("topics").stream()
     return [doc.id for doc in docs]
 
-def get_topic_prompt(uid: str, topic: str):
-    doc = _db.collection("users").document(uid).collection("topics").document(topic).get()
-    if doc.exists:
-        return doc.to_dict()["prompt"]
-    return None
-
 def test_prompt(uid: str, prompt: str, test: str):
     pipeline = get_model_pipeline(uid)
     return pipeline.grade_with_prompt(prompt, test)

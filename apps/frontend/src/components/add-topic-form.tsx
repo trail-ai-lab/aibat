@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { IconLoader } from "@tabler/icons-react"
-import { createTopic, type CreateTopicRequest } from "@/lib/api/tests"
+import { addTopic } from "@/lib/api/topics"
 import { toast } from "sonner"
 
 type AddTopicFormProps = {
@@ -75,14 +75,15 @@ export function AddTopicForm({ onClose, onSuccess }: AddTopicFormProps) {
       }
     }
 
-    const topicData: CreateTopicRequest = {
+    const topicData = {
       topic: _name,
       prompt_topic: _prompt,
       tests: testData,
+      default: false
     }
 
     try {
-      await createTopic(topicData)
+      await addTopic(topicData)
       toast.success(`Topic "${_name}" created successfully!`)
       onSuccess(_name)
       onClose()

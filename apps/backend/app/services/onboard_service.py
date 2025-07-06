@@ -3,7 +3,6 @@
 import os
 import pandas as pd
 from datetime import datetime
-from firebase_admin import firestore
 from app.utils.model_selector import get_model_pipeline
 from app.core.topic_config import DEFAULT_TOPICS
 from app.core.firebase_client import db as _db

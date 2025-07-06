@@ -65,24 +65,32 @@ export interface GenerateStatementsResponse {
 }
 
 export async function fetchTestsByTopic(topic: string): Promise<TopicTestsResponse> {
+  console.log(`🌐 fetchTestsByTopic API call starting for topic: ${topic}`)
   const user = getAuth().currentUser
   if (!user) throw new Error("User not authenticated")
 
   const token = await user.getIdToken()
+  const url = `${API_BASE_URL}/api/v1/tests/topic/${encodeURIComponent(topic)}`
+  console.log(`🔗 Making fetch request to: ${url}`)
 
-  const res = await fetch(`${API_BASE_URL}/api/v1/tests/topic/${encodeURIComponent(topic)}`, {
+  const res = await fetch(url, {
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json'
     },
   })
 
+  console.log(`📊 Response status: ${res.status} ${res.statusText} for topic: ${topic}`)
+
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}))
+    console.log(`💥 API Error for topic ${topic}:`, errorData)
     throw new Error(errorData.detail || `Failed to fetch tests for topic ${topic}`)
   }
 
-  return await res.json()
+  const data = await res.json()
+  console.log(`✨ Successfully fetched ${data.tests?.length || 0} tests for topic: ${topic}`)
+  return data
 }
 
 export async function fetchAvailableTopics(): Promise<AvailableTopicsResponse> {

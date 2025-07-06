@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { DataTable } from "@/components/data-table"
 import { SiteHeader } from "@/components/site-header"
@@ -21,7 +21,6 @@ import { useModels } from "@/hooks/use-models"
 import { usePerturbations } from "@/hooks/use-perturbations"
 import { Badge } from "@/components/ui/badge"
 import { IconLoader, IconDatabase } from "@tabler/icons-react"
-import { fetchTopicPrompt } from "@/lib/api/topics"
 import { updateTestAssessment } from "@/lib/api/tests"
 import { toast } from "sonner"
 
@@ -29,12 +28,63 @@ export default function Page() {
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null)
   const [isCreateTopicOpen, setIsCreateTopicOpen] = useState(false)
   const [topicPrompt, setTopicPrompt] = useState<string | null>(null)
-  const [promptLoading, setPromptLoading] = useState(false)
   const [pendingTopicSelection, setPendingTopicSelection] = useState<string | null>(null)
   const { selectedModel } = useModels()
   const { tests, loading, error, currentTopic, totalTests, fetchTests } = useTests(undefined, selectedModel)
   const { topics, refreshTopics } = useTopics()
   const { perturbations, loading: perturbationsLoading, addPerturbations } = usePerturbations(currentTopic || undefined)
+
+  const handleTopicSelect = useCallback(async (topic: string) => {
+    console.log(`🔄 handleTopicSelect called with topic: ${topic}`)
+    setSelectedTopic(topic)
+    fetchTests(topic)
+    
+    // Get topic prompt from the topics data
+    const selectedTopicData = topics.find(t => t.name === topic)
+    if (selectedTopicData) {
+      setTopicPrompt(selectedTopicData.prompt)
+    } else {
+      setTopicPrompt(null)
+    }
+  }, [fetchTests, topics])
+
+  // Load selected topic from localStorage on mount - ONLY ONCE
+  useEffect(() => {
+    console.log(`🚀 Dashboard useEffect: Loading saved topic from localStorage`)
+    const savedTopic = localStorage.getItem('selectedTopic')
+    console.log(`💾 Saved topic from localStorage: ${savedTopic}`)
+    if (savedTopic && !selectedTopic) {
+      console.log(`🎯 Setting selected topic to: ${savedTopic}`)
+      setSelectedTopic(savedTopic)
+      // Only call handleTopicSelect if topics are loaded and the topic exists
+      if (topics.length > 0 && topics.some(t => t.name === savedTopic)) {
+        handleTopicSelect(savedTopic)
+      } else if (topics.length > 0) {
+        // If saved topic doesn't exist, clear it from localStorage
+        console.log(`🗑️ Saved topic "${savedTopic}" not found in available topics, clearing localStorage`)
+        localStorage.removeItem('selectedTopic')
+        setSelectedTopic(null)
+      }
+    }
+  }, []) // Remove handleTopicSelect dependency to prevent infinite loop
+
+  // Handle delayed topic selection when topics load after localStorage check
+  useEffect(() => {
+    const savedTopic = localStorage.getItem('selectedTopic')
+    if (savedTopic && !selectedTopic && topics.length > 0 && topics.some(t => t.name === savedTopic)) {
+      console.log(`🔄 Topics loaded, now selecting saved topic: ${savedTopic}`)
+      handleTopicSelect(savedTopic)
+    }
+  }, [topics, selectedTopic, handleTopicSelect])
+
+  // Save selected topic to localStorage whenever it changes
+  useEffect(() => {
+    if (selectedTopic) {
+      localStorage.setItem('selectedTopic', selectedTopic)
+    } else {
+      localStorage.removeItem('selectedTopic')
+    }
+  }, [selectedTopic])
 
   // Auto-select newly created topic when topics list updates
   useEffect(() => {
@@ -42,24 +92,7 @@ export default function Page() {
       handleTopicSelect(pendingTopicSelection)
       setPendingTopicSelection(null)
     }
-  }, [topics, pendingTopicSelection])
-
-  const handleTopicSelect = async (topic: string) => {
-    setSelectedTopic(topic)
-    fetchTests(topic)
-    
-    // Fetch topic prompt
-    setPromptLoading(true)
-    try {
-      const prompt = await fetchTopicPrompt(topic)
-      setTopicPrompt(prompt)
-    } catch (error) {
-      console.error("Error fetching topic prompt:", error)
-      setTopicPrompt(null)
-    } finally {
-      setPromptLoading(false)
-    }
-  }
+  }, [topics, pendingTopicSelection, handleTopicSelect])
 
   const handleCreateTopic = () => {
     setIsCreateTopicOpen(true)
@@ -124,7 +157,7 @@ export default function Page() {
         variant="inset"
         onTopicSelect={handleTopicSelect}
         onCreateTopic={handleCreateTopic}
-        selectedTopic={currentTopic}
+        selectedTopic={selectedTopic}
       />
       <SidebarInset>
         <SiteHeader />
@@ -146,19 +179,12 @@ export default function Page() {
                       }
                     </p>
                     {/* Topic Prompt */}
-                    {currentTopic && (
+                    {currentTopic && topicPrompt && (
                       <div className="mt-3">
-                        {promptLoading ? (
-                          <div className="flex items-center gap-2">
-                            <IconLoader className="size-4 animate-spin" />
-                            <span className="text-sm text-muted-foreground">Loading prompt...</span>
-                          </div>
-                        ) : topicPrompt ? (
-                          <div className="bg-muted/50 rounded-lg p-3 border-l-4 border-primary">
-                            <p className="text-sm font-medium text-foreground mb-1">Topic Prompt:</p>
-                            <p className="text-sm text-muted-foreground leading-relaxed">{topicPrompt}</p>
-                          </div>
-                        ) : null}
+                        <div className="bg-muted/50 rounded-lg p-3 border-l-4 border-primary">
+                          <p className="text-sm font-medium text-foreground mb-1">Topic Prompt:</p>
+                          <p className="text-sm text-muted-foreground leading-relaxed">{topicPrompt}</p>
+                        </div>
                       </div>
                     )}
                   </div>
