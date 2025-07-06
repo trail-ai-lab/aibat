@@ -21,6 +21,10 @@ class TestPromptInput(BaseModel):
     prompt: str
     test: str
 
+class EditTopicInput(BaseModel):
+    old_topic: str
+    new_topic: str
+    prompt: str
 
 # ----------- Test Management -----------
 

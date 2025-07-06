@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { IconLoader } from "@tabler/icons-react"
-import { createTopic, type CreateTopicRequest } from "@/lib/api/tests"
+import { addTopic } from "@/lib/api/topics"
 import { toast } from "sonner"
 
 type AddTopicFormProps = {
@@ -75,14 +75,15 @@ export function AddTopicForm({ onClose, onSuccess }: AddTopicFormProps) {
       }
     }
 
-    const topicData: CreateTopicRequest = {
+    const topicData = {
       topic: _name,
       prompt_topic: _prompt,
       tests: testData,
+      default: false
     }
 
     try {
-      await createTopic(topicData)
+      await addTopic(topicData)
       toast.success(`Topic "${_name}" created successfully!`)
       onSuccess(_name)
       onClose()
@@ -112,10 +113,6 @@ export function AddTopicForm({ onClose, onSuccess }: AddTopicFormProps) {
 
   return (
     <div className="w-full flex flex-col max-h-[80vh] overflow-y-auto">
-      {/* Header */}
-      <div className="text-2xl p-4 font-light w-full text-center border-b">
-        Add New Topic
-      </div>
 
       <div className="flex flex-col items-center justify-center h-full">
         <div className="px-8 py-6 mb-4 w-full space-y-6">

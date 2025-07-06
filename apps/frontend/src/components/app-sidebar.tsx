@@ -1,25 +1,16 @@
+// apps/frontend/src/components/app-sidebar.tsx
+
 "use client"
 
 import * as React from "react"
 import {
-  IconCamera,
-  IconChartBar,
-  IconDashboard,
-  IconDatabase,
-  IconFileAi,
-  IconFileDescription,
-  IconFileWord,
-  IconFolder,
-  IconHelp,
-  IconInnerShadowTop,
-  IconListDetails,
-  IconReport,
-  IconSearch,
   IconSettings,
-  IconUsers,
+  IconHelp,
+  IconSearch,
+  IconInnerShadowTop,
 } from "@tabler/icons-react"
 
-import { NavDocuments } from "@/components/nav-topics"
+import { NavTopics } from "@/components/nav-topics"
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
@@ -32,7 +23,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { useTopics } from "@/hooks/use-topics"
+import { Topic } from "@/types/topics"
 
 const data = {
   navSecondary: [
@@ -57,15 +48,21 @@ const data = {
 export function AppSidebar({
   onTopicSelect,
   onCreateTopic,
+  onDeleteTopic,
+  onEditTopic,
   selectedTopic,
+  topics,
+  loading,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   onTopicSelect?: (topic: string) => void
   onCreateTopic?: () => void
+  onDeleteTopic?: (topic: string) => void
+  onEditTopic?: (oldName: string, newName: string, prompt: string) => Promise<void>
   selectedTopic?: string | null
+  topics: Topic[]
+  loading: boolean
 }) {
-    const { topics, loading } = useTopics()
-    console.log("Loaded topics:", topics, "Loading:", loading)
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -85,10 +82,12 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <NavMain onCreateTopic={onCreateTopic} />
-        <NavDocuments
+        <NavTopics
           topics={topics}
           onTopicSelect={onTopicSelect}
           selectedTopic={selectedTopic}
+          onDeleteTopic={onDeleteTopic}
+          onEditTopic={onEditTopic}
         />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>

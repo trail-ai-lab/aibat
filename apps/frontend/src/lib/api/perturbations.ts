@@ -1,16 +1,6 @@
 import { getAuth } from "firebase/auth"
 import { API_BASE_URL } from "@/lib/api"
-
-export interface PerturbationResponse {
-  id: string
-  original_id: string
-  title: string
-  label: "pass" | "fail"
-  type: string
-  topic: string
-  ground_truth: "acceptable" | "unacceptable"
-  validity: "approved" | "denied" | "unapproved"
-}
+import { PerturbationResponse } from "@/types/perturbations"
 
 export interface GeneratePerturbationsRequest {
   topic: string

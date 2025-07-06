@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from typing import List
 from app.core.firebase_auth import verify_firebase_token
@@ -12,6 +12,12 @@ from app.models.schemas import (
 )
 
 router = APIRouter()
+
+# Get tests by topic
+@router.get("/topic/{topic}")
+def get_tests_by_topic(topic: str, user=Depends(verify_firebase_token)):
+    return tests_service.get_tests_by_topic(user["uid"], topic)
+
 
 @router.post("/add")
 def add_tests(payload: AddTestsRequest, user=Depends(verify_firebase_token)):

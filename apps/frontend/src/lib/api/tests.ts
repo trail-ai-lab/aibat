@@ -4,21 +4,15 @@ import { API_BASE_URL } from "@/lib/api"
 export interface TestResponse {
   id: string
   topic: string
-  statement: string
-  ground_truth: "acceptable" | "unacceptable"
-  your_assessment: "ungraded" | "acceptable" | "unacceptable"
-  ai_assessment: "pass" | "fail"
-  agreement: boolean
-  labeler: string
-  description?: string
-  author?: string
-  model_score?: string
-  is_builtin?: boolean
+  title: string  // formerly 'statement'
+  ground_truth: "acceptable" | "unacceptable" | "ungraded"
+  label: "acceptable" | "unacceptable" | "ungraded" // maps to ai_assessment
+  validity?: string // e.g., "approved" or null/undefined
+  created_at?: string
 }
 
 export interface TopicTestsResponse {
   topic: string
-  total_tests: number
   tests: TestResponse[]
 }
 
@@ -65,24 +59,28 @@ export interface GenerateStatementsResponse {
 }
 
 export async function fetchTestsByTopic(topic: string): Promise<TopicTestsResponse> {
+  console.log(`🌐 fetchTestsByTopic API call starting for topic: ${topic}`)
   const user = getAuth().currentUser
   if (!user) throw new Error("User not authenticated")
 
   const token = await user.getIdToken()
+  const url = `${API_BASE_URL}/api/v1/tests/topic/${encodeURIComponent(topic)}`
 
-  const res = await fetch(`${API_BASE_URL}/api/v1/tests/topic/${encodeURIComponent(topic)}`, {
+  const res = await fetch(url, {
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json'
     },
   })
 
+
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}))
     throw new Error(errorData.detail || `Failed to fetch tests for topic ${topic}`)
   }
 
-  return await res.json()
+  const data = await res.json()
+  return data
 }
 
 export async function fetchAvailableTopics(): Promise<AvailableTopicsResponse> {
