@@ -96,10 +96,10 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
             variant="outline"
             className={`px-1.5 ${
               assessment === "pass"
-                ? "text-green-600 border-green-200"
+                ? "text-green-600"
                 : assessment === "fail"
-                ? "text-red-600 border-red-200"
-                : "text-gray-600 border-gray-200"
+                ? "text-red-600"
+                : "text-gray-600"
             }`}
           >
             {assessment === "pass" ? "Acceptable" :
@@ -150,7 +150,7 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
       if (assessment === "ungraded") {
         return (
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="px-1.5 text-gray-600 border-gray-200">
+            <Badge variant="outline" className="px-1.5">
               Ungraded
             </Badge>
             <div className="flex items-center gap-1">
@@ -179,8 +179,8 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
       
       // For graded parent items, show the regular badge
       const badgeClass = assessment === "acceptable"
-        ? "px-1.5 text-green-600 border-green-200"
-        : "px-1.5 text-red-600 border-red-200";
+        ? "px-1.5 text-green-600"
+        : "px-1.5 text-red-600";
       const displayText = assessment === "acceptable" ? "Acceptable" : "Unacceptable";
       
       return (
@@ -210,7 +210,7 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
           return (
             <Badge
               variant="outline"
-              className="px-1.5 text-gray-600 border-gray-200"
+              className="px-1.5"
             >
               <IconLoader className="mr-1 h-3 w-3" />
               Pending
@@ -228,8 +228,8 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
             variant="outline"
             className={`px-1.5 ${
               isMatch
-                ? "text-green-600 border-green-200"
-                : "text-orange-600 border-orange-200"
+                ? "text-green-600"
+                : "text-orange-600"
             }`}
           >
             {isMatch ? (
@@ -248,7 +248,7 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
         return (
           <Badge
             variant="outline"
-            className="px-1.5 text-gray-600 border-gray-200"
+            className="px-1.5"
           >
             <IconLoader className="mr-1 h-3 w-3" />
             Pending
@@ -261,8 +261,8 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
           variant="outline"
           className={`px-1.5 ${
             agreement
-              ? "text-green-600 border-green-200"
-              : "text-orange-600 border-orange-200"
+              ? "text-green-600"
+              : "text-orange-600"
           }`}
         >
           {agreement ? (
@@ -287,7 +287,7 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
       if (isChildRow) {
         return (
           <div className="pl-4">
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="outline" className="text-xs">
               {row.original.perturbation_type || row.original.criteria_text || "Perturbation"}
             </Badge>
           </div>
