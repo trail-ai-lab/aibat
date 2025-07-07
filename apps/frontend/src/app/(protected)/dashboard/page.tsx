@@ -40,6 +40,7 @@ export default function Page() {
     handleTopicCreated,
     handleTopicDelete,
     handleTopicEdit,
+    refreshTests,
   } = useDashboard(selectedModel)
 
   const { perturbations, addPerturbations } = usePerturbations(currentTopic || undefined)
@@ -99,7 +100,7 @@ export default function Page() {
         onEditTopic={handleTopicEdit}
       />
       <SidebarInset>
-        <SiteHeader topicName={currentTopic ?? undefined} />
+        <SiteHeader topicName={currentTopic ?? undefined} testsCount={tests.length} />
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
@@ -111,7 +112,7 @@ export default function Page() {
                 error={error}
                 data={tableData}
                 onAssessmentChange={handleAssessmentChange}
-                onDataRefresh={() => currentTopic && handleTopicSelect(currentTopic)}
+                onDataRefresh={refreshTests}
                 cachedPerturbations={perturbations}
                 onPerturbationsUpdate={addPerturbations}
               />
