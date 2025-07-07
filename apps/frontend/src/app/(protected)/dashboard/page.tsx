@@ -10,6 +10,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import {
   Drawer,
   DrawerContent,
+  DrawerDescription,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer"
@@ -147,6 +148,7 @@ export default function Page() {
         <DrawerContent>
             <DrawerHeader>
               <DrawerTitle>Create New Topic</DrawerTitle>
+              <DrawerDescription>Create new topic for assessment.</DrawerDescription>
             </DrawerHeader>
             <AddTopicForm
               onClose={() => setIsCreateTopicOpen(false)}
