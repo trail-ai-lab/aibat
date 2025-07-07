@@ -1,11 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { ModelSelector } from "@/components/model-selector"
 import { AIBehaviorAnalyzer } from "@/components/ai-behavior-analyzer"
 import { CriteriaManager } from "@/components/criteria-manager"
 import { TestManager } from "@/components/test-manager"
-import { type PerturbationResponse } from "@/lib/api/perturbations"
+import { type PerturbationResponse } from "@/types/perturbations"
 
 interface TableActionsToolbarProps {
   currentTopic?: string
@@ -42,8 +41,6 @@ export function TableActionsToolbar({
 }: TableActionsToolbarProps) {
   return (
     <div className="flex items-center gap-2">
-      <ModelSelector currentTopic={currentTopic} />
-      
       <CriteriaManager
         currentTopic={currentTopic}
         isOpen={isCriteriaEditorOpen}
