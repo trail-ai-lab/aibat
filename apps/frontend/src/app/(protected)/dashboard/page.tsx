@@ -41,6 +41,7 @@ export default function Page() {
     handleTopicDelete,
     handleTopicEdit,
     refreshTests,
+    updateTestAssessment: updateLocalTestAssessment,
   } = useDashboard(selectedModel)
 
   const { perturbations, addPerturbations } = usePerturbations(currentTopic || undefined)
@@ -48,33 +49,47 @@ export default function Page() {
   const tableData = useMemo(
   () =>
     tests
-      .map(test => ({
-        id: test.id,
-        statement: test.title,
-        ground_truth: test.ground_truth as "acceptable" | "unacceptable" | "ungraded",
-        ai_assessment: test.label === "acceptable" ? "pass" as const :
-                       test.label === "unacceptable" ? "fail" as const :
-                       test.label === "ungraded" ? "grading" as const :
-                       "grading" as const,
-        agreement: test.validity === "approved" ? true :
-                   test.validity === "denied" ? false :
-                   null, // No agreement calculated yet
-        topic: test.topic,
-        labeler: "ai_generated",
-        description: "", // can update if available
-        author: "",
-        model_score: "",
-        is_builtin: false,
-        parent_id: undefined,
-        criteria_text: undefined,
-        perturbation_type: undefined
-      })),
+      .map(test => {
+        // Calculate agreement based on AI assessment vs user assessment
+        const aiAssessment = test.label === "acceptable" ? "acceptable" :
+                           test.label === "unacceptable" ? "unacceptable" : null;
+        const userAssessment = test.ground_truth;
+        
+        let agreement = null;
+        if (aiAssessment && userAssessment !== "ungraded") {
+          agreement = aiAssessment === userAssessment;
+        }
+        
+        return {
+          id: test.id,
+          statement: test.title,
+          ground_truth: test.ground_truth as "acceptable" | "unacceptable" | "ungraded",
+          ai_assessment: test.label === "acceptable" ? "pass" as const :
+                         test.label === "unacceptable" ? "fail" as const :
+                         test.label === "ungraded" ? "grading" as const :
+                         "grading" as const,
+          agreement,
+          topic: test.topic,
+          labeler: "ai_generated",
+          description: "", // can update if available
+          author: "",
+          model_score: "",
+          is_builtin: false,
+          parent_id: undefined,
+          criteria_text: undefined,
+          perturbation_type: undefined
+        }
+      }),
   [tests]
 )
 
   const handleAssessmentChange = async (testId: string, assessment: "acceptable" | "unacceptable") => {
     try {
       await updateTestAssessment(testId, assessment)
+      
+      // Update local state immediately to reflect the change in the specific cell
+      updateLocalTestAssessment(testId, assessment)
+      
       toast.success(`Assessment updated to ${assessment}`)
     } catch (error) {
       console.error("Error updating assessment:", error)

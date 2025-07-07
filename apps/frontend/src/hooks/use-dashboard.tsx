@@ -17,7 +17,8 @@ export function useDashboard(selectedModel: string | undefined) {
     loading,
     error,
     currentTopic,
-    fetchTests
+    fetchTests,
+    updateTestAssessment
   } = useTests(selectedTopic || undefined, selectedModel)
 
   const refreshTopics = useCallback(async () => {
@@ -127,5 +128,6 @@ export function useDashboard(selectedModel: string | undefined) {
     handleTopicEdit,
     refreshTopics,
     refreshTests: () => selectedTopic && fetchTests(selectedTopic, true),
+    updateTestAssessment,
   }
 }

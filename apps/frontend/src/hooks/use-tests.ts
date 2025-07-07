@@ -80,6 +80,16 @@ export function useTests(topic?: string, modelId?: string) {
     setError(null)
   }
 
+  const updateTestAssessment = (testId: string, assessment: "acceptable" | "unacceptable") => {
+    setTests(prevTests =>
+      prevTests.map(test =>
+        test.id === testId
+          ? { ...test, ground_truth: assessment }
+          : test
+      )
+    )
+  }
+
   // Debounced fetch when topic changes
   useEffect(() => {
     if (!topic) return
@@ -110,6 +120,7 @@ export function useTests(topic?: string, modelId?: string) {
     currentModelId,
     fetchTests,
     clearTests,
+    updateTestAssessment,
   }
 }
 
