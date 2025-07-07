@@ -100,13 +100,13 @@ export async function updateTestAssessment(testId: string, assessment: "acceptab
 
   const token = await user.getIdToken()
 
-  const res = await fetch(`${API_BASE_URL}/api/v1/tests/assessment/${encodeURIComponent(testId)}`, {
-    method: 'PUT',
+  const res = await fetch(`${API_BASE_URL}/api/v1/tests/assess`, {
+    method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ assessment })
+    body: JSON.stringify({ test_id: testId, assessment })
   })
 
   if (!res.ok) {
@@ -228,7 +228,7 @@ export async function autoGradeTests(testIds: string[]): Promise<AutoGradeTestsR
 
   const token = await user.getIdToken()
 
-  const res = await fetch(`${API_BASE_URL}/api/v1/tests/grade`, {
+  const res = await fetch(`${API_BASE_URL}/api/v1/tests/auto-grade`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
