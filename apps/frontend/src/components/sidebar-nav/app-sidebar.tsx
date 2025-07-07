@@ -3,6 +3,7 @@
 "use client"
 
 import * as React from "react"
+import { useState } from "react"
 import {
   IconSettings,
   IconHelp,
@@ -10,10 +11,11 @@ import {
   IconInnerShadowTop,
 } from "@tabler/icons-react"
 
-import { NavTopics } from "@/components/nav-topics"
-import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
-import { NavUser } from "@/components/nav-user"
+import { NavTopics } from "@/components/sidebar-nav/nav-topics"
+import { NavMain } from "@/components/sidebar-nav/nav-main"
+import { NavSecondary } from "@/components/sidebar-nav/nav-secondary"
+import { NavUser } from "@/components/sidebar-nav/nav-user"
+import { SettingsDrawer } from "@/components/sidebar-nav/settings-drawer"
 import {
   Sidebar,
   SidebarContent,
@@ -24,26 +26,6 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { Topic } from "@/types/topics"
-
-const data = {
-  navSecondary: [
-    {
-      title: "Settings",
-      url: "#",
-      icon: IconSettings,
-    },
-    {
-      title: "Get Help",
-      url: "#",
-      icon: IconHelp,
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: IconSearch,
-    },
-  ],
-}
 
 export function AppSidebar({
   onTopicSelect,
@@ -63,6 +45,21 @@ export function AppSidebar({
   topics: Topic[]
   loading: boolean
 }) {
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+
+  const navSecondary = [
+    {
+      title: "Settings",
+      url: "#",
+      icon: IconSettings,
+      onClick: () => setIsSettingsOpen(true),
+    },
+    {
+      title: "Get Help",
+      url: "#",
+      icon: IconHelp,
+    },
+  ]
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -89,11 +86,17 @@ export function AppSidebar({
           onDeleteTopic={onDeleteTopic}
           onEditTopic={onEditTopic}
         />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavSecondary items={navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser />
       </SidebarFooter>
+
+      <SettingsDrawer
+        open={isSettingsOpen}
+        onOpenChange={setIsSettingsOpen}
+        currentTopic={selectedTopic || undefined}
+      />
     </Sidebar>
   )
 }

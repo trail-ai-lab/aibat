@@ -21,9 +21,9 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { IconChevronsLeft, IconChevronLeft, IconChevronRight, IconChevronsRight } from "@tabler/icons-react"
 
-import { TableActionsToolbar } from "@/components/table-actions-toolbar"
-import { ChartPieLabel } from "@/components/char-area-interactive"
-import { ChartTooltipDefault } from "@/components/chart-tooltip-default"
+import { TableActionsToolbar } from "@/components/toolbar-action-buttons/table-actions-toolbar"
+import { ChartPieLabel } from "@/components/dashboard/char-area-interactive"
+import { ChartTooltipDefault } from "@/components/dashboard/chart-tooltip-default"
 
 import { PerturbationResponse } from "@/types/perturbations"
 import { z } from "zod"
