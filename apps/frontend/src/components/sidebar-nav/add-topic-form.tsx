@@ -15,12 +15,10 @@ type AddTopicFormProps = {
 }
 
 export function AddTopicForm({ onClose, onSuccess }: AddTopicFormProps) {
-  const [shorthandTopic, setShorthandTopic] = useState("")
   const [topic, setTopic] = useState("")
   const [prompt, setPrompt] = useState("")
   const [isDefaultGradingPrompt, setIsDefaultGradingPrompt] = useState(true)
 
-  // Array of tests and ground truths
   const [tests, setTests] = useState(Array(10).fill(""))
   const [groundTruths, setGroundTruths] = useState(Array(10).fill(""))
 
@@ -42,17 +40,16 @@ export function AddTopicForm({ onClose, onSuccess }: AddTopicFormProps) {
   const handleAddTopic = async () => {
     setIsAddingTopic(true)
     setSubmitErrorMsg("")
-    
-    const _name = shorthandTopic.trim()
+
+    const _topic = topic.trim()
     const _prompt = prompt.trim()
-    
-    if (_name === "" || _prompt === "" || tests.every((test) => test === "")) {
-      // Create error message
+
+    if (_topic === "" || _prompt === "" || tests.every((test) => test === "")) {
       let errorMsg = "Please enter "
-      if (_name === "" || _prompt === "")
+      if (_topic === "" || _prompt === "")
         errorMsg += "a topic name and prompt "
       if (tests.every((test) => test === ""))
-        errorMsg += `${_name === "" ? "and" : ""} at least one test`
+        errorMsg += `${_topic === "" ? "and" : ""} at least one test`
       setSubmitErrorMsg(errorMsg)
       setIsAddingTopic(false)
       return
@@ -69,14 +66,14 @@ export function AddTopicForm({ onClose, onSuccess }: AddTopicFormProps) {
           return
         }
         testData.push({
-          test: test,
+          test,
           ground_truth: groundTruths[i] as "acceptable" | "unacceptable",
         })
       }
     }
 
     const topicData = {
-      topic: _name,
+      topic: _topic,
       prompt_topic: _prompt,
       tests: testData,
       default: false
@@ -84,8 +81,8 @@ export function AddTopicForm({ onClose, onSuccess }: AddTopicFormProps) {
 
     try {
       await addTopic(topicData)
-      toast.success(`Topic "${_name}" created successfully!`)
-      onSuccess(_name)
+      toast.success(`Topic "${_topic}" created successfully!`)
+      onSuccess(_topic)
       onClose()
     } catch (error) {
       console.error(error)
@@ -95,7 +92,6 @@ export function AddTopicForm({ onClose, onSuccess }: AddTopicFormProps) {
     }
   }
 
-  // Reset grading prompt on checkbox change
   useEffect(() => {
     if (isDefaultGradingPrompt) {
       setPrompt(`Is this sentence an acceptable or unacceptable statement about ${topic || "{topic}"}? Here is the sentence:`)
@@ -113,7 +109,6 @@ export function AddTopicForm({ onClose, onSuccess }: AddTopicFormProps) {
 
   return (
     <div className="w-full flex flex-col max-h-[80vh] overflow-y-auto">
-
       <div className="flex flex-col items-center justify-center h-full">
         <div className="px-8 py-6 mb-4 w-full space-y-6">
           <div className="space-y-2">
@@ -126,21 +121,6 @@ export function AddTopicForm({ onClose, onSuccess }: AddTopicFormProps) {
               placeholder="e.g., Physics Energy Concepts"
               value={topic}
               onChange={(e) => onTopicChange(e.target.value)}
-              className="w-2/5"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="shorthand" className="text-sm font-bold">
-              Shorthand Topic (10 characters max):
-            </Label>
-            <Input
-              id="shorthand"
-              type="text"
-              placeholder="e.g., ENERGY"
-              maxLength={10}
-              value={shorthandTopic}
-              onChange={(e) => setShorthandTopic(e.target.value)}
               className="w-2/5"
             />
           </div>
@@ -170,9 +150,7 @@ export function AddTopicForm({ onClose, onSuccess }: AddTopicFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-bold">
-              Tests:
-            </Label>
+            <Label className="text-sm font-bold">Tests:</Label>
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {Array.from({ length: 10 }, (_, i) => (
                 <div key={i} className="flex gap-2 items-center">

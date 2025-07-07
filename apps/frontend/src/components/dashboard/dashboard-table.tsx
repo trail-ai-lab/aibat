@@ -4,6 +4,7 @@ import { DataTable } from "@/components/data-table/data-table"
 import { PerturbationResponse } from "@/types/perturbations"
 import { z } from "zod"
 import { schema } from "../data-table/schema"
+import { Skeleton } from "../ui/skeleton"
 
 interface Props {
   topic: string | null
@@ -28,10 +29,16 @@ export function DashboardTable({
 }: Props) {
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <IconLoader className="size-6 animate-spin mr-2" />
-        <span>Loading tests...</span>
-      </div>
+      <div className="space-y-4 py-4">
+      {[...Array(5)].map((_, i) => (
+        <div key={i} className="flex items-center gap-4 px-4">
+          <Skeleton className="h-4 w-4 rounded" />
+          <Skeleton className="h-4 w-[40%]" />
+          <Skeleton className="h-4 w-[20%]" />
+          <Skeleton className="h-4 w-[15%]" />
+        </div>
+      ))}
+    </div>
     )
   }
 
