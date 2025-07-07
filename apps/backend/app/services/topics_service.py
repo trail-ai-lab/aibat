@@ -22,7 +22,6 @@ def add_topic(uid: str, body):
         "created_at": datetime.utcnow()
     })
 
-
     # Use shared logic to add test statements
     test_payload = [{"title": t.test, "ground_truth": t.ground_truth} for t in tests]
     add_tests(uid, topic, test_payload)

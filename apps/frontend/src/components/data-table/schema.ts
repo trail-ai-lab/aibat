@@ -5,7 +5,6 @@ export const schema = z.object({
   id: z.string(),
   statement: z.string(),
   ground_truth: z.enum(["acceptable", "unacceptable", "ungraded"]),
-  your_assessment: z.enum(["acceptable", "unacceptable", "ungraded"]),
   ai_assessment: z.enum(["pass", "fail", "grading"]),
   agreement: z.boolean().nullable(),
   topic: z.string(),

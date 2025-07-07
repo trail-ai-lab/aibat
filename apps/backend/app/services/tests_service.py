@@ -30,7 +30,7 @@ def delete_tests(user_id: str, test_ids: list[str]):
 
 
 # Grade multiple test statements by ID
-def grade_tests(user_id: str, test_ids: list[str]):
+def auto_grade_tests(user_id: str, test_ids: list[str]):
     pipeline = get_model_pipeline(user_id)
     ref = db.collection("users").document(user_id).collection("tests")
     assessments = []
@@ -59,7 +59,7 @@ def grade_tests(user_id: str, test_ids: list[str]):
             "ai_assessment": label
         })
 
-    cache_multiple_assessments(user_id, topic, "groq-llama3", assessments)  # or get user's current model
+    cache_multiple_assessments(user_id, topic, DEFAULT_MODEL_ID, assessments)  # or get user's current model
     return {"graded_count": len(assessments), "results": assessments}
 
 
@@ -84,14 +84,23 @@ def add_assessment(user_id: str, test_id: str, assessment: str):
     if assessment not in ["acceptable", "unacceptable"]:
         raise ValueError("Assessment must be acceptable or unacceptable")
 
-    assessment_ref = db.collection("users").document(user_id).collection("assessments").document(test_id)
-    assessment_ref.set({
-        "test_id": test_id,
-        "assessment": assessment,
+    test_ref = db.collection("users").document(user_id).collection("tests").document(test_id)
+
+    # Check if the test exists
+    test_doc = test_ref.get()
+    if not test_doc.exists:
+        raise ValueError(f"Test with ID '{test_id}' not found")
+
+    test_ref.update({
+        "ground_truth": assessment,
         "updated_at": datetime.utcnow()
     })
 
-    return {"message": "Assessment updated", "test_id": test_id, "assessment": assessment}
+    return {
+        "message": "Assessment recorded as ground truth",
+        "test_id": test_id,
+        "assessment": assessment
+    }
 
 
 # Return all logs for the user

@@ -96,22 +96,25 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
             variant="outline"
             className={`px-1.5 ${
               assessment === "pass"
-                ? "text-green-600 border-green-200"
-                : "text-red-600 border-red-200"
+                ? "text-green-600"
+                : assessment === "fail"
+                ? "text-red-600"
+                : "text-gray-600"
             }`}
           >
-            {assessment === "pass" ? "Acceptable" : "Unacceptable"}
+            {assessment === "pass" ? "Acceptable" :
+             assessment === "fail" ? "Unacceptable" : "Ungraded"}
           </Badge>
         </div>
       );
     },
   },
   {
-    accessorKey: "your_assessment",
+    accessorKey: "ground_truth",
     header: "Your Assessment",
     cell: ({ row, table }) => {
       const isChildRow = !!row.original.parent_id;
-      const assessment = row.original.your_assessment;
+      const assessment = row.original.ground_truth;
       const testId = row.original.id;
       
       // For child rows (perturbations), check parent assessment status
@@ -121,7 +124,7 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
         const parentRow = allRows.find(r => r.id === parentId && !r.parent_id);
         
         // If parent is ungraded, show perturbation as ungraded
-        if (parentRow?.your_assessment === "ungraded") {
+        if (parentRow?.ground_truth === "ungraded") {
           return (
             <Badge variant="outline" className="px-1.5 text-gray-600 border-gray-200">
               Ungraded
@@ -147,7 +150,7 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
       if (assessment === "ungraded") {
         return (
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="px-1.5 text-gray-600 border-gray-200">
+            <Badge variant="outline" className="px-1.5">
               Ungraded
             </Badge>
             <div className="flex items-center gap-1">
@@ -176,8 +179,8 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
       
       // For graded parent items, show the regular badge
       const badgeClass = assessment === "acceptable"
-        ? "px-1.5 text-green-600 border-green-200"
-        : "px-1.5 text-red-600 border-red-200";
+        ? "px-1.5 text-green-600"
+        : "px-1.5 text-red-600";
       const displayText = assessment === "acceptable" ? "Acceptable" : "Unacceptable";
       
       return (
@@ -194,7 +197,7 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
       const isChildRow = !!row.original.parent_id;
       const agreement = row.original.agreement;
       const aiAssessment = row.original.ai_assessment;
-      const yourAssessment = row.original.your_assessment;
+      const yourAssessment = row.original.ground_truth;
       
       // For child rows (perturbations), handle agreement calculation differently
       if (isChildRow) {
@@ -203,11 +206,11 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
         const parentRow = allRows.find(r => r.id === parentId && !r.parent_id);
         
         // If parent is ungraded or AI is still grading, show pending
-        if (parentRow?.your_assessment === "ungraded" || aiAssessment === "grading") {
+        if (parentRow?.ground_truth === "ungraded" || aiAssessment === "grading") {
           return (
             <Badge
               variant="outline"
-              className="px-1.5 text-gray-600 border-gray-200"
+              className="px-1.5"
             >
               <IconLoader className="mr-1 h-3 w-3" />
               Pending
@@ -225,8 +228,8 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
             variant="outline"
             className={`px-1.5 ${
               isMatch
-                ? "text-green-600 border-green-200"
-                : "text-orange-600 border-orange-200"
+                ? "text-green-600"
+                : "text-orange-600"
             }`}
           >
             {isMatch ? (
@@ -245,7 +248,7 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
         return (
           <Badge
             variant="outline"
-            className="px-1.5 text-gray-600 border-gray-200"
+            className="px-1.5"
           >
             <IconLoader className="mr-1 h-3 w-3" />
             Pending
@@ -258,8 +261,8 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
           variant="outline"
           className={`px-1.5 ${
             agreement
-              ? "text-green-600 border-green-200"
-              : "text-orange-600 border-orange-200"
+              ? "text-green-600"
+              : "text-orange-600"
           }`}
         >
           {agreement ? (
@@ -284,7 +287,7 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
       if (isChildRow) {
         return (
           <div className="pl-4">
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="outline" className="text-xs">
               {row.original.perturbation_type || row.original.criteria_text || "Perturbation"}
             </Badge>
           </div>

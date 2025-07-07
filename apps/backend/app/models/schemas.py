@@ -73,8 +73,7 @@ class TestResponse(BaseModel):
     id: str
     topic: str
     statement: str
-    ground_truth: Literal["acceptable", "unacceptable"]
-    your_assessment: Literal["ungraded", "acceptable", "unacceptable"]
+    ground_truth: Literal["ungraded", "acceptable", "unacceptable"]
     ai_assessment: Literal["pass", "fail", "grading"]
     agreement: Optional[bool] = None
     labeler: str

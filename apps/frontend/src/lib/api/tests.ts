@@ -6,7 +6,7 @@ export interface TestResponse {
   topic: string
   title: string  // formerly 'statement'
   ground_truth: "acceptable" | "unacceptable" | "ungraded"
-  label: "acceptable" | "unacceptable" | "ungraded" // maps to ai_assessment
+  label: "acceptable" | "unacceptable" | "ungraded" | "grading" // maps to ai_assessment
   validity?: string // e.g., "approved" or null/undefined
   created_at?: string
 }
@@ -50,7 +50,6 @@ export interface GenerateStatementsResponse {
 }
 
 export async function fetchTestsByTopic(topic: string): Promise<TopicTestsResponse> {
-  console.log(`🌐 fetchTestsByTopic API call starting for topic: ${topic}`)
   const user = getAuth().currentUser
   if (!user) throw new Error("User not authenticated")
 
@@ -71,6 +70,7 @@ export async function fetchTestsByTopic(topic: string): Promise<TopicTestsRespon
   }
 
   const data = await res.json()
+  console.log("fetchTestsByTopic", data)
   return data
 }
 
@@ -100,13 +100,13 @@ export async function updateTestAssessment(testId: string, assessment: "acceptab
 
   const token = await user.getIdToken()
 
-  const res = await fetch(`${API_BASE_URL}/api/v1/tests/assessment/${encodeURIComponent(testId)}`, {
-    method: 'PUT',
+  const res = await fetch(`${API_BASE_URL}/api/v1/tests/assess`, {
+    method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ assessment })
+    body: JSON.stringify({ test_id: testId, assessment })
   })
 
   if (!res.ok) {
@@ -204,6 +204,42 @@ export async function addStatementsToTopic(statementsData: AddStatementsRequest)
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}))
     throw new Error(errorData.detail || "Failed to add statements to topic")
+  }
+
+  return await res.json()
+}
+
+export interface AutoGradeTestsRequest {
+  test_ids: string[]
+}
+
+export interface AutoGradeTestsResponse {
+  graded_count: number
+  results: Array<{
+    test_id: string
+    statement: string
+    ai_assessment: string
+  }>
+}
+
+export async function autoGradeTests(testIds: string[]): Promise<AutoGradeTestsResponse> {
+  const user = getAuth().currentUser
+  if (!user) throw new Error("User not authenticated")
+
+  const token = await user.getIdToken()
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/tests/auto-grade`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ test_ids: testIds })
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.detail || "Failed to auto grade tests")
   }
 
   return await res.json()

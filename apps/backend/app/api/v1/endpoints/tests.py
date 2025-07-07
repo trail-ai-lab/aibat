@@ -39,9 +39,9 @@ def delete_tests(payload: DeleteTestsRequest, user=Depends(verify_firebase_token
     return tests_service.delete_tests(user["uid"], payload.test_ids)
 
 
-@router.post("/grade")
+@router.post("/auto-grade")
 def grade_tests(payload: GradeTestsRequest, user=Depends(verify_firebase_token)):
-    return tests_service.grade_tests(user["uid"], payload.test_ids)
+    return tests_service.auto_grade_tests(user["uid"], payload.test_ids)
 
 
 @router.put("/edit")
