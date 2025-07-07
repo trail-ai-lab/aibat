@@ -14,7 +14,7 @@ import {
 import {
   CriteriaType,
   CriteriaTypeSelector,
-} from "@/components/criteria-type-selector"
+} from "@/components/toolbar-action-buttons/criteria-type-selector"
 import { useCriteria } from "@/hooks/use-criteria"
 import { Button } from "@/components/ui/button"
 import {

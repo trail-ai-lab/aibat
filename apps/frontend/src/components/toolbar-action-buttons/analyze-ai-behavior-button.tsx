@@ -1,12 +1,15 @@
+// apps/frontend/src/components/ai-behavior-analyzer.tsx
+
 "use client"
 
 import * as React from "react"
 import { IconLoader, IconTrendingUp } from "@tabler/icons-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { generatePerturbations, type PerturbationResponse } from "@/lib/api/perturbations"
+import { generatePerturbations } from "@/lib/api/perturbations"
+import { PerturbationResponse } from "@/types/perturbations"
 
-interface AIBehaviorAnalyzerProps {
+interface AnalyzeAIBehaviorButtonProps {
   currentTopic?: string
   selectedRowsCount: number
   selectedTestIds: string[]
@@ -16,7 +19,7 @@ interface AIBehaviorAnalyzerProps {
   onShowCriteriaColumn: () => void
 }
 
-export function AIBehaviorAnalyzer({
+export function AnalyzeAIBehaviorButton({
   currentTopic,
   selectedRowsCount,
   selectedTestIds,
@@ -24,7 +27,7 @@ export function AIBehaviorAnalyzer({
   onGeneratingChange,
   onPerturbationsGenerated,
   onShowCriteriaColumn,
-}: AIBehaviorAnalyzerProps) {
+}: AnalyzeAIBehaviorButtonProps) {
   const handleAnalyzeAIBehavior = async () => {
     console.log("Analyze AI Behavior button clicked!")
     console.log("Current topic:", currentTopic)

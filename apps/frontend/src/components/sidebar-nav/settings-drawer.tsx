@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/drawer"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { ModelSelector } from "@/components/model-selector"
+import { ModelSelector } from "@/components/sidebar-nav/model-selector"
 
 interface SettingsDrawerProps {
   open: boolean

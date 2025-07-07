@@ -1,3 +1,5 @@
+// apps/frontend/src/components/criteria-manager.tsx
+
 "use client"
 
 import * as React from "react"
@@ -11,19 +13,19 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer"
-import { CriteriaEditor } from "@/components/criteria-editor"
+import { CriteriaEditor } from "@/components/toolbar-action-buttons/criteria-editor"
 
-interface CriteriaManagerProps {
+interface CriteriaButtonProps {
   currentTopic?: string
   isOpen: boolean
   onOpenChange: (open: boolean) => void
 }
 
-export function CriteriaManager({
+export function CriteriaButton({
   currentTopic,
   isOpen,
   onOpenChange,
-}: CriteriaManagerProps) {
+}: CriteriaButtonProps) {
   return (
     <Drawer
       direction="bottom"

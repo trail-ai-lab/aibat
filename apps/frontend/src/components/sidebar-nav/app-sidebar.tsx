@@ -11,11 +11,11 @@ import {
   IconInnerShadowTop,
 } from "@tabler/icons-react"
 
-import { NavTopics } from "@/components/nav-topics"
-import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
-import { NavUser } from "@/components/nav-user"
-import { SettingsDrawer } from "@/components/settings-drawer"
+import { NavTopics } from "@/components/sidebar-nav/nav-topics"
+import { NavMain } from "@/components/sidebar-nav/nav-main"
+import { NavSecondary } from "@/components/sidebar-nav/nav-secondary"
+import { NavUser } from "@/components/sidebar-nav/nav-user"
+import { SettingsDrawer } from "@/components/sidebar-nav/settings-drawer"
 import {
   Sidebar,
   SidebarContent,

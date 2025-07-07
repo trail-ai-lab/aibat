@@ -3,9 +3,9 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { AppSidebar } from "@/components/app-sidebar"
+import { AppSidebar } from "@/components/sidebar-nav/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
-import { AddTopicForm } from "@/components/add-topic-form"
+import { AddTopicForm } from "@/components/sidebar-nav/add-topic-form"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import {
   Drawer,

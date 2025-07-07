@@ -1,9 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { AIBehaviorAnalyzer } from "@/components/ai-behavior-analyzer"
-import { CriteriaManager } from "@/components/criteria-manager"
-import { TestManager } from "@/components/test-manager"
+import { AnalyzeAIBehaviorButton } from "@/components/toolbar-action-buttons/analyze-ai-behavior-button"
+import { CriteriaButton } from "@/components/toolbar-action-buttons/criteria-button"
+import { AddStatementsButton } from "@/components/toolbar-action-buttons/add-statements-button"
+import { GenerateStatementsButton } from "@/components/toolbar-action-buttons/generate-statements-button"
 import { type PerturbationResponse } from "@/types/perturbations"
 
 interface TableActionsToolbarProps {
@@ -41,13 +42,13 @@ export function TableActionsToolbar({
 }: TableActionsToolbarProps) {
   return (
     <div className="flex items-center gap-2">
-      <CriteriaManager
+      <CriteriaButton
         currentTopic={currentTopic}
         isOpen={isCriteriaEditorOpen}
         onOpenChange={onCriteriaEditorOpenChange}
       />
-      
-      <AIBehaviorAnalyzer
+
+      <AnalyzeAIBehaviorButton
         currentTopic={currentTopic}
         selectedRowsCount={selectedRowsCount}
         selectedTestIds={selectedTestIds}
@@ -56,14 +57,19 @@ export function TableActionsToolbar({
         onPerturbationsGenerated={onPerturbationsGenerated}
         onShowCriteriaColumn={onShowCriteriaColumn}
       />
-      
-      <TestManager
+
+      <AddStatementsButton
         currentTopic={currentTopic}
-        isAddStatementsOpen={isAddStatementsOpen}
-        onAddStatementsOpenChange={onAddStatementsOpenChange}
-        isGenerateStatementsOpen={isGenerateStatementsOpen}
-        onGenerateStatementsOpenChange={onGenerateStatementsOpenChange}
-        onDataRefresh={onDataRefresh}
+        isOpen={isAddStatementsOpen}
+        onOpenChange={onAddStatementsOpenChange}
+        onSuccess={onDataRefresh || (() => {})}
+      />
+
+      <GenerateStatementsButton
+        currentTopic={currentTopic}
+        isOpen={isGenerateStatementsOpen}
+        onOpenChange={onGenerateStatementsOpenChange}
+        onSuccess={onDataRefresh || (() => {})}
       />
     </div>
   )
