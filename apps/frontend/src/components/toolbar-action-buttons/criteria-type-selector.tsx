@@ -6,12 +6,8 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
 import clsx from "clsx"
+import { CriteriaType } from "@/types/criteria"
 
-export interface CriteriaType {
-  name: string
-  prompt: string
-  isDefault: boolean
-}
 
 interface Props {
   items: CriteriaType[]
@@ -87,7 +83,7 @@ export function CriteriaTypeSelector({
                 "flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer transition-colors",
                 item.isDefault
                   ? "bg-background border border-muted"
-                  : "bg-yellow-50 border border-yellow-500/50",
+                  : "bg-background border border-muted text-green-600",
                 isChecked ? "ring-2 ring-muted-foreground/30" : ""
               )}
             >

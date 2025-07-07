@@ -1,19 +1,6 @@
 import { getAuth } from "firebase/auth"
 import { API_BASE_URL } from "@/lib/api"
-
-export interface DefaultCriteriaItem {
-  config: string
-  types: {
-    name: string
-    prompt: string
-  }[]
-}
-
-export interface CriteriaTypeInput {
-  name: string
-  prompt: string
-  isDefault: boolean
-}
+import { CriteriaTypeInput, DefaultCriteriaItem } from "@/types/criteria"
 
 export async function fetchDefaultCriteria(): Promise<DefaultCriteriaItem[]> {
   const user = getAuth().currentUser
@@ -61,7 +48,6 @@ export async function saveUserCriteria(topic: string, types: CriteriaTypeInput[]
   const user = getAuth().currentUser
   if (!user) throw new Error("User not authenticated")
   const token = await user.getIdToken()
-
   const res = await fetch(`${API_BASE_URL}/api/v1/criteria/user/save`, {
     method: "POST",
     headers: {

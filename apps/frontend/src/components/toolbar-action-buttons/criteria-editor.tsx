@@ -12,7 +12,6 @@ import {
   SelectItem,
 } from "@/components/ui/select"
 import {
-  CriteriaType,
   CriteriaTypeSelector,
 } from "@/components/toolbar-action-buttons/criteria-type-selector"
 import { useCriteria } from "@/hooks/use-criteria"
@@ -20,9 +19,9 @@ import { Button } from "@/components/ui/button"
 import {
   fetchUserCriteria,
   saveUserCriteria,
-  type CriteriaTypeInput,
 } from "@/lib/api/criteria"
 import { toast } from "sonner"
+import { CriteriaType } from "@/types/criteria"
 
 interface CriteriaEditorProps {
   onClose: () => void
@@ -42,7 +41,7 @@ export function CriteriaEditor({ onClose, currentTopic }: CriteriaEditorProps) {
       const config = criteriaConfigs.find((c) => c.config === appConfig)
       if (!config || !currentTopic) return
 
-      const defaultTypes: CriteriaType[] = config.types.map((t) => ({
+      const defaultTypes: CriteriaType[] = config.types.map((t: any) => ({
         ...t,
         isDefault: true,
       }))
@@ -79,7 +78,7 @@ export function CriteriaEditor({ onClose, currentTopic }: CriteriaEditorProps) {
   useEffect(() => {
     const config = criteriaConfigs.find((c) => c.config === appConfig)
     if (config) {
-      const defaultTypes: CriteriaType[] = config.types.map((t) => ({
+      const defaultTypes: CriteriaType[] = config.types.map((t: any) => ({
         ...t,
         isDefault: true,
       }))
@@ -92,7 +91,15 @@ export function CriteriaEditor({ onClose, currentTopic }: CriteriaEditorProps) {
     setAppConfig(value)
   }
 
+  // Set default config to first item when loaded
+  useEffect(() => {
+    if (!loading && criteriaConfigs.length > 0 && !appConfig) {
+      setAppConfig(criteriaConfigs[0].config)
+    }
+  }, [loading, criteriaConfigs, appConfig])
+
   const handleSave = async () => {
+    console.log("Criteria Save: ", currentTopic)
     if (!currentTopic) return
 
     const selected = items
@@ -145,7 +152,7 @@ export function CriteriaEditor({ onClose, currentTopic }: CriteriaEditorProps) {
       <Separator />
 
       {/* Save Button */}
-      <div className="flex justify-end">
+      <div className="flex justify-start">
         <Button onClick={handleSave}>Save Criteria</Button>
       </div>
     </div>
