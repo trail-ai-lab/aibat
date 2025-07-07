@@ -1,9 +1,11 @@
+# apps/backend/app/services/perturbations_service.py
 from uuid import uuid4
 from datetime import datetime
 from app.utils.logs import log_test
 from app.core.firebase_client import db
 from app.utils.model_selector import get_model_pipeline
 from app.services.tests_service import get_tests_by_topic
+from app.services.criteria_service import save_user_criteria
 from app.core.criteria_config import (
     DEFAULT_CRITERIA_CONFIGS,
     get_criteria_prompt,
@@ -37,6 +39,8 @@ def generate_perturbations(uid: str, topic: str, test_ids: list, batch_size: int
             criteria_types = criteria_data.get("types", [])
         else:
             print(f"No user criteria found for topic '{topic}', using AIBAT fallback")
+
+            # Build default AIBAT criteria config
             criteria_types = [
                 {
                     "name": name,
@@ -45,6 +49,9 @@ def generate_perturbations(uid: str, topic: str, test_ids: list, batch_size: int
                 }
                 for name in DEFAULT_CRITERIA_CONFIGS.get("AIBAT", [])
             ]
+
+            # Save it to Firestore so it's stored for future use
+            save_user_criteria(uid, topic, criteria_types)
 
         pipeline = get_model_pipeline(uid)
         results = []
