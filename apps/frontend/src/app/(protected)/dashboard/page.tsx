@@ -51,14 +51,15 @@ export default function Page() {
       .map(test => ({
         id: test.id,
         statement: test.title,
-        ground_truth: test.ground_truth as "acceptable" | "unacceptable",
-        your_assessment: test.ground_truth as "acceptable" | "unacceptable" | "ungraded", // until your backend supports it
+        ground_truth: test.ground_truth as "acceptable" | "unacceptable" | "ungraded",
+        your_assessment: "ungraded" as "acceptable" | "unacceptable" | "ungraded", // User hasn't assessed yet
         ai_assessment: test.label === "acceptable" ? "pass" as const :
                        test.label === "unacceptable" ? "fail" as const :
+                       test.label === "ungraded" ? "grading" as const :
                        "grading" as const,
         agreement: test.validity === "approved" ? true :
-                   test.validity === null || test.validity === undefined ? null :
-                   false,
+                   test.validity === "denied" ? false :
+                   null, // No agreement calculated yet
         topic: test.topic,
         labeler: "ai_generated",
         description: "", // can update if available

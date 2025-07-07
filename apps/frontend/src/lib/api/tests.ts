@@ -6,7 +6,7 @@ export interface TestResponse {
   topic: string
   title: string  // formerly 'statement'
   ground_truth: "acceptable" | "unacceptable" | "ungraded"
-  label: "acceptable" | "unacceptable" | "ungraded" // maps to ai_assessment
+  label: "acceptable" | "unacceptable" | "ungraded" | "grading" // maps to ai_assessment
   validity?: string // e.g., "approved" or null/undefined
   created_at?: string
 }
@@ -204,6 +204,42 @@ export async function addStatementsToTopic(statementsData: AddStatementsRequest)
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}))
     throw new Error(errorData.detail || "Failed to add statements to topic")
+  }
+
+  return await res.json()
+}
+
+export interface AutoGradeTestsRequest {
+  test_ids: string[]
+}
+
+export interface AutoGradeTestsResponse {
+  graded_count: number
+  results: Array<{
+    test_id: string
+    statement: string
+    ai_assessment: string
+  }>
+}
+
+export async function autoGradeTests(testIds: string[]): Promise<AutoGradeTestsResponse> {
+  const user = getAuth().currentUser
+  if (!user) throw new Error("User not authenticated")
+
+  const token = await user.getIdToken()
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/tests/grade`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ test_ids: testIds })
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.detail || "Failed to auto grade tests")
   }
 
   return await res.json()

@@ -30,7 +30,7 @@ def delete_tests(user_id: str, test_ids: list[str]):
 
 
 # Grade multiple test statements by ID
-def grade_tests(user_id: str, test_ids: list[str]):
+def auto_grade_tests(user_id: str, test_ids: list[str]):
     pipeline = get_model_pipeline(user_id)
     ref = db.collection("users").document(user_id).collection("tests")
     assessments = []
@@ -59,7 +59,7 @@ def grade_tests(user_id: str, test_ids: list[str]):
             "ai_assessment": label
         })
 
-    cache_multiple_assessments(user_id, topic, "groq-llama3", assessments)  # or get user's current model
+    cache_multiple_assessments(user_id, topic, DEFAULT_MODEL_ID, assessments)  # or get user's current model
     return {"graded_count": len(assessments), "results": assessments}
 
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { fetchTestsByTopic, type TestResponse } from "@/lib/api/tests"
+import { fetchTestsByTopic, autoGradeTests, type TestResponse } from "@/lib/api/tests"
 
 export function useTests(topic?: string, modelId?: string) {
   const [tests, setTests] = useState<TestResponse[]>([])
@@ -29,14 +29,47 @@ export function useTests(topic?: string, modelId?: string) {
       const response = await fetchTestsByTopic(topicName)
       console.log(`✅ API call successful for topic: ${topicName}`)
       console.log(response.tests)
+      
+      // Set tests and stop loading immediately to show the table
       setTests(response.tests)
       setCurrentTopic(topicName)
+      setLoading(false) // Stop loading here so table shows immediately
+      
+      // Auto grade ungraded tests in the background
+      const ungradedTests = response.tests.filter(test => test.label === "ungraded")
+      if (ungradedTests.length > 0) {
+        console.log(`🤖 Auto grading ${ungradedTests.length} ungraded tests in background...`)
+        
+        // Update the tests to show "grading" state immediately
+        const testsWithGradingState = response.tests.map(test =>
+          ungradedTests.some(ungraded => ungraded.id === test.id)
+            ? { ...test, label: "grading" as const }
+            : test
+        )
+        setTests(testsWithGradingState)
+        
+        // Do auto grading in background without affecting loading state
+        setTimeout(async () => {
+          try {
+            const ungradedTestIds = ungradedTests.map(test => test.id)
+            await autoGradeTests(ungradedTestIds)
+            
+            // Refresh tests to get the updated grades
+            const updatedResponse = await fetchTestsByTopic(topicName)
+            setTests(updatedResponse.tests)
+            console.log(`✅ Auto grading completed for ${ungradedTests.length} tests`)
+          } catch (gradingError) {
+            console.error("❌ Error during auto grading:", gradingError)
+            // Revert grading state on error
+            setTests(response.tests)
+          }
+        }, 100) // Small delay to ensure UI updates first
+      }
     } catch (err) {
       console.error(`❌ Error fetching tests for topic ${topicName}:`, err)
       setError(err instanceof Error ? err.message : "Failed to fetch tests")
       setTests([])
       lastFetchRef.current = null
-    } finally {
       setLoading(false)
     }
   }

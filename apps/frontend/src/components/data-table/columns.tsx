@@ -97,10 +97,13 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
             className={`px-1.5 ${
               assessment === "pass"
                 ? "text-green-600 border-green-200"
-                : "text-red-600 border-red-200"
+                : assessment === "fail"
+                ? "text-red-600 border-red-200"
+                : "text-gray-600 border-gray-200"
             }`}
           >
-            {assessment === "pass" ? "Acceptable" : "Unacceptable"}
+            {assessment === "pass" ? "Acceptable" :
+             assessment === "fail" ? "Unacceptable" : "Ungraded"}
           </Badge>
         </div>
       );
