@@ -20,6 +20,7 @@ interface AddStatementsButtonProps {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
+  inDropdown?: boolean
 }
 
 export function AddStatementsButton({
@@ -27,6 +28,7 @@ export function AddStatementsButton({
   isOpen,
   onOpenChange,
   onSuccess, // ✅ accept this
+  inDropdown = false,
 }: AddStatementsButtonProps) {
   return (
     <Drawer direction="bottom" open={isOpen} onOpenChange={onOpenChange}>
@@ -36,9 +38,10 @@ export function AddStatementsButton({
           size="sm"
           disabled={!currentTopic}
           title={!currentTopic ? "Select a topic to add statements" : "Add statements to this topic"}
+          className={inDropdown ? "w-full justify-start" : "justify-start"}
         >
           <IconPlus />
-          <span className="hidden lg:inline">Add Statements</span>
+          <span className={inDropdown ? "ml-2" : "hidden xl:inline"}>Add Statements</span>
         </Button>
       </DrawerTrigger>
       <DrawerContent>

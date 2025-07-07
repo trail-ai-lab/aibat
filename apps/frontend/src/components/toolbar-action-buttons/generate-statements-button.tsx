@@ -45,9 +45,10 @@ export function GenerateStatementsButton({
           size="sm"
           disabled={!currentTopic}
           title={!currentTopic ? "Select a topic to generate statements" : "Generate AI statements for this topic"}
+          className="justify-start"
         >
           <IconSparkles />
-          <span className="hidden lg:inline">Generate Statements</span>
+          <span className="hidden xl:inline">Generate Statements</span>
         </Button>
       </DrawerTrigger>
       <DrawerContent>

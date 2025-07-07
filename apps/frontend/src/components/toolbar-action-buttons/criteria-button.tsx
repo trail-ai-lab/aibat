@@ -19,12 +19,14 @@ interface CriteriaButtonProps {
   currentTopic?: string
   isOpen: boolean
   onOpenChange: (open: boolean) => void
+  inDropdown?: boolean
 }
 
 export function CriteriaButton({
   currentTopic,
   isOpen,
   onOpenChange,
+  inDropdown = false,
 }: CriteriaButtonProps) {
   return (
     <Drawer
@@ -37,9 +39,10 @@ export function CriteriaButton({
           variant="outline"
           size="sm"
           title="Manage criteria for perturbations"
+          className={inDropdown ? "w-full justify-start" : "justify-start"}
         >
           <IconSettings />
-          <span className="hidden lg:inline">Criteria</span>
+          <span className={inDropdown ? "ml-2" : "hidden xl:inline"}>Criteria</span>
         </Button>
       </DrawerTrigger>
       <DrawerContent>

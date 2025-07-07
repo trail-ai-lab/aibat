@@ -93,13 +93,14 @@ export function AnalyzeAIBehaviorButton({
       disabled={!currentTopic || isGeneratingPerturbations}
       onClick={handleAnalyzeAIBehavior}
       title={!currentTopic ? "Select a topic to analyze AI behavior" : "Generate perturbations for selected test statements"}
+      className="justify-start"
     >
       {isGeneratingPerturbations ? (
         <IconLoader className="animate-spin" />
       ) : (
         <IconTrendingUp />
       )}
-      <span className="hidden lg:inline">
+      <span className="hidden xl:inline">
         {isGeneratingPerturbations ? "Analyzing..." : "Analyze AI Behavior"}
       </span>
     </Button>

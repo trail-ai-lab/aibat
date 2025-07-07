@@ -6,6 +6,14 @@ import { CriteriaButton } from "@/components/toolbar-action-buttons/criteria-but
 import { AddStatementsButton } from "@/components/toolbar-action-buttons/add-statements-button"
 import { GenerateStatementsButton } from "@/components/toolbar-action-buttons/generate-statements-button"
 import { type PerturbationResponse } from "@/types/perturbations"
+import { useToolbarCollapse } from "@/hooks/use-mobile"
+import { Button } from "@/components/ui/button"
+import { IconDots } from "@tabler/icons-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface TableActionsToolbarProps {
   currentTopic?: string
@@ -40,12 +48,65 @@ export function TableActionsToolbar({
   onGenerateStatementsOpenChange,
   onDataRefresh,
 }: TableActionsToolbarProps) {
+  const shouldCollapse = useToolbarCollapse()
+
+  // Keep first two buttons (Generate Statements and Analyze AI Behavior) visible, collapse others into dropdown
+  if (shouldCollapse) {
+    return (
+      <div className="flex items-center gap-2">
+        <GenerateStatementsButton
+          currentTopic={currentTopic}
+          isOpen={isGenerateStatementsOpen}
+          onOpenChange={onGenerateStatementsOpenChange}
+          onSuccess={onDataRefresh || (() => {})}
+        />
+        
+        <AnalyzeAIBehaviorButton
+          currentTopic={currentTopic}
+          selectedRowsCount={selectedRowsCount}
+          selectedTestIds={selectedTestIds}
+          isGeneratingPerturbations={isGeneratingPerturbations}
+          onGeneratingChange={onGeneratingChange}
+          onPerturbationsGenerated={onPerturbationsGenerated}
+          onShowCriteriaColumn={onShowCriteriaColumn}
+        />
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" title="More actions">
+              <IconDots />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="flex flex-col gap-1 p-1">
+              <CriteriaButton
+                currentTopic={currentTopic}
+                isOpen={isCriteriaEditorOpen}
+                onOpenChange={onCriteriaEditorOpenChange}
+                inDropdown={true}
+              />
+              <AddStatementsButton
+                currentTopic={currentTopic}
+                isOpen={isAddStatementsOpen}
+                onOpenChange={onAddStatementsOpenChange}
+                onSuccess={onDataRefresh || (() => {})}
+                inDropdown={true}
+              />
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    )
+  }
+
+  // Full toolbar for larger screens - reordered as requested
   return (
     <div className="flex items-center gap-2">
-      <CriteriaButton
+      <GenerateStatementsButton
         currentTopic={currentTopic}
-        isOpen={isCriteriaEditorOpen}
-        onOpenChange={onCriteriaEditorOpenChange}
+        isOpen={isGenerateStatementsOpen}
+        onOpenChange={onGenerateStatementsOpenChange}
+        onSuccess={onDataRefresh || (() => {})}
       />
 
       <AnalyzeAIBehaviorButton
@@ -58,17 +119,16 @@ export function TableActionsToolbar({
         onShowCriteriaColumn={onShowCriteriaColumn}
       />
 
+      <CriteriaButton
+        currentTopic={currentTopic}
+        isOpen={isCriteriaEditorOpen}
+        onOpenChange={onCriteriaEditorOpenChange}
+      />
+
       <AddStatementsButton
         currentTopic={currentTopic}
         isOpen={isAddStatementsOpen}
         onOpenChange={onAddStatementsOpenChange}
-        onSuccess={onDataRefresh || (() => {})}
-      />
-
-      <GenerateStatementsButton
-        currentTopic={currentTopic}
-        isOpen={isGenerateStatementsOpen}
-        onOpenChange={onGenerateStatementsOpenChange}
         onSuccess={onDataRefresh || (() => {})}
       />
     </div>
