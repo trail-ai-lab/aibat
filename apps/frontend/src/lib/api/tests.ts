@@ -45,17 +45,8 @@ export interface GenerateStatementsRequest {
 }
 
 export interface GenerateStatementsResponse {
-  message: string
-  topic: string
-  criteria: string
-  generated_count: number
-  statements: Array<{
-    id: string
-    statement: string
-    ground_truth: "acceptable" | "unacceptable"
-    your_assessment: "ungraded" | "acceptable" | "unacceptable"
-    ai_assessment: "pass" | "fail" | "grading"
-  }>
+  added_count: number
+  test_ids: string[]
 }
 
 export async function fetchTestsByTopic(topic: string): Promise<TopicTestsResponse> {

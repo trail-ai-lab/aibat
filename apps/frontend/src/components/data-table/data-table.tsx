@@ -48,6 +48,11 @@ export function DataTable({
   onPerturbationsUpdate?: (newPerturbations: Map<string, PerturbationResponse[]>) => void
 }) {
   const [data, setData] = React.useState(() => initialData)
+
+  // Update local data when initialData changes (e.g., after generating new statements)
+  React.useEffect(() => {
+    setData(initialData)
+  }, [initialData])
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})

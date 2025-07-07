@@ -5,8 +5,7 @@ from datetime import datetime
 from app.core.firebase_client import db as _db
 from uuid import uuid4
 from app.utils.model_selector import get_model_pipeline
-from app.api.v1.endpoints.topics import TopicTestInput
-from app.services.tests_service import add_tests
+from app.services.shared_test_utils import add_tests
 
 
 def add_topic(uid: str, body):

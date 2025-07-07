@@ -123,8 +123,9 @@ export function useDashboard(selectedModel: string | undefined) {
     topicsLoading,
     handleTopicSelect,
     handleTopicCreated,
-    handleTopicDelete, 
+    handleTopicDelete,
     handleTopicEdit,
     refreshTopics,
+    refreshTests: () => selectedTopic && fetchTests(selectedTopic, true),
   }
 }
