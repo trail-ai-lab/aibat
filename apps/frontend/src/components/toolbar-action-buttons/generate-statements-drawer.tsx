@@ -52,6 +52,7 @@ export function GenerateStatementsButton({
         </Button>
       </DrawerTrigger>
       <DrawerContent>
+        <div className="mx-auto w-full max-w-md">
         <DrawerHeader className="gap-1">
           <DrawerTitle>Generate Statements</DrawerTitle>
           <DrawerDescription>
@@ -66,6 +67,7 @@ export function GenerateStatementsButton({
               onSuccess={handleSuccess}
             />
           )}
+        </div>
         </div>
       </DrawerContent>
     </Drawer>

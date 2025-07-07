@@ -109,7 +109,7 @@ export function GenerateStatementsForm({ topicName, onClose, onSuccess }: Genera
               Generating...
             </Button>
           ) : (
-            <Button onClick={handleGenerateStatements} className="w-40">
+            <Button onClick={handleGenerateStatements}>
               <IconSparkles className="w-4 h-4 mr-2" />
               Generate Statements
             </Button>
