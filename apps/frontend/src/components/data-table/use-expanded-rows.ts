@@ -34,7 +34,6 @@ export function useExpandedRows(perturbations: Map<string, PerturbationResponse[
           perturbation_type: perturbation.type,
           ai_assessment: perturbation.label,
           ground_truth: perturbation.ground_truth,
-          your_assessment: "ungraded",
           agreement: null,
         })
       })

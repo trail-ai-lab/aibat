@@ -28,7 +28,6 @@ export function useTests(topic?: string, modelId?: string) {
     try {
       const response = await fetchTestsByTopic(topicName)
       console.log(`✅ API call successful for topic: ${topicName}`)
-      console.log(response.tests)
       
       // Set tests and stop loading immediately to show the table
       setTests(response.tests)

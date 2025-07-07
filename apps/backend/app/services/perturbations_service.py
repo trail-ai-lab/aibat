@@ -87,8 +87,8 @@ def generate_perturbations(uid: str, topic: str, test_ids: list, batch_size: int
                 ai_assessment = "pass" if label_result == "acceptable" else "fail"
 
                 # Use user's current assessment instead of original ground_truth
-                # This is the key fix - use your_assessment from the test object
-                user_assessment = test.your_assessment
+                # This is the key fix - use ground_truth from the test object
+                user_assessment = test.ground_truth
                 if user_assessment == "ungraded":
                     # If user hasn't assessed yet, fall back to original ground_truth
                     expected_gt = test.ground_truth

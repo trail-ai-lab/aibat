@@ -110,11 +110,11 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
     },
   },
   {
-    accessorKey: "your_assessment",
+    accessorKey: "ground_truth",
     header: "Your Assessment",
     cell: ({ row, table }) => {
       const isChildRow = !!row.original.parent_id;
-      const assessment = row.original.your_assessment;
+      const assessment = row.original.ground_truth;
       const testId = row.original.id;
       
       // For child rows (perturbations), check parent assessment status
@@ -124,7 +124,7 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
         const parentRow = allRows.find(r => r.id === parentId && !r.parent_id);
         
         // If parent is ungraded, show perturbation as ungraded
-        if (parentRow?.your_assessment === "ungraded") {
+        if (parentRow?.ground_truth === "ungraded") {
           return (
             <Badge variant="outline" className="px-1.5 text-gray-600 border-gray-200">
               Ungraded
@@ -197,7 +197,7 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
       const isChildRow = !!row.original.parent_id;
       const agreement = row.original.agreement;
       const aiAssessment = row.original.ai_assessment;
-      const yourAssessment = row.original.your_assessment;
+      const yourAssessment = row.original.ground_truth;
       
       // For child rows (perturbations), handle agreement calculation differently
       if (isChildRow) {
@@ -206,7 +206,7 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
         const parentRow = allRows.find(r => r.id === parentId && !r.parent_id);
         
         // If parent is ungraded or AI is still grading, show pending
-        if (parentRow?.your_assessment === "ungraded" || aiAssessment === "grading") {
+        if (parentRow?.ground_truth === "ungraded" || aiAssessment === "grading") {
           return (
             <Badge
               variant="outline"

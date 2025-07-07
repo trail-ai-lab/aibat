@@ -52,7 +52,6 @@ export default function Page() {
         id: test.id,
         statement: test.title,
         ground_truth: test.ground_truth as "acceptable" | "unacceptable" | "ungraded",
-        your_assessment: "ungraded" as "acceptable" | "unacceptable" | "ungraded", // User hasn't assessed yet
         ai_assessment: test.label === "acceptable" ? "pass" as const :
                        test.label === "unacceptable" ? "fail" as const :
                        test.label === "ungraded" ? "grading" as const :

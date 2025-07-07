@@ -50,7 +50,6 @@ export interface GenerateStatementsResponse {
 }
 
 export async function fetchTestsByTopic(topic: string): Promise<TopicTestsResponse> {
-  console.log(`🌐 fetchTestsByTopic API call starting for topic: ${topic}`)
   const user = getAuth().currentUser
   if (!user) throw new Error("User not authenticated")
 
@@ -71,6 +70,7 @@ export async function fetchTestsByTopic(topic: string): Promise<TopicTestsRespon
   }
 
   const data = await res.json()
+  console.log("fetchTestsByTopic", data)
   return data
 }
 
