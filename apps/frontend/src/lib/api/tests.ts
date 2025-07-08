@@ -33,7 +33,7 @@ export interface CreateTopicRequest {
 export interface AddStatementsRequest {
   topic: string
   tests: Array<{
-    test: string
+    title: string
     ground_truth: "acceptable" | "unacceptable"
   }>
 }
@@ -192,7 +192,7 @@ export async function addStatementsToTopic(statementsData: AddStatementsRequest)
 
   const token = await user.getIdToken()
 
-  const res = await fetch(`${API_BASE_URL}/api/v1/tests/topics/add-statements`, {
+  const res = await fetch(`${API_BASE_URL}/api/v1/tests/add`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,

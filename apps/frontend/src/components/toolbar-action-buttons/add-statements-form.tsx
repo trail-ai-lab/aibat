@@ -65,7 +65,7 @@ export function AddStatementsForm({
           toast.error("Please select a ground truth for all filled tests.")
           throw new Error("Please select a ground truth for all filled tests.")
         }
-        return [{ test: test.trim(), ground_truth }]
+        return [{ title: test.trim(), ground_truth }]
       }
       return []
     })
