@@ -17,8 +17,8 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { IconLoader } from "@tabler/icons-react"
+import { TestStatementsSection } from "@/components/shared/test-statements-section"
 
 const formSchema = z.object({
   topic: z.string().min(1, "Topic is required"),
@@ -187,93 +187,11 @@ export function AddTopicForm({
               </div>
 
               {/* Test Statements Section */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold">Test Statements</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Add test statements and mark them as acceptable or
-                    unacceptable. At least one test is required.
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  {form.watch("tests").map((_, i) => (
-                    <div key={i} className="space-y-2">
-                      {/* Label Row */}
-                      <div className="flex justify-between">
-                        <FormLabel className="text-sm font-medium">
-                          Test Statement {i + 1}
-                        </FormLabel>
-                      </div>
-
-                      {/* Input + Radio Group Row */}
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full">
-                        {/* Test Input: grows */}
-                        <FormField
-                          control={form.control}
-                          name={`tests.${i}.test`}
-                          render={({ field }) => (
-                            <FormItem className="flex-1">
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  placeholder={`Enter test statement ${
-                                    i + 1
-                                  }...`}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        {/* Radio Group: fixed width */}
-                        <FormField
-                          control={form.control}
-                          name={`tests.${i}.ground_truth`}
-                          render={({ field }) => (
-                            <FormItem className="shrink-0">
-                              <FormControl>
-                                <RadioGroup
-                                  className="flex gap-4"
-                                  value={field.value}
-                                  onValueChange={field.onChange}
-                                >
-                                  <div className="flex items-center space-x-2">
-                                    <RadioGroupItem
-                                      value="acceptable"
-                                      id={`acc-${i}`}
-                                    />
-                                    <FormLabel
-                                      htmlFor={`acc-${i}`}
-                                      className="cursor-pointer"
-                                    >
-                                      Acceptable
-                                    </FormLabel>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    <RadioGroupItem
-                                      value="unacceptable"
-                                      id={`unacc-${i}`}
-                                    />
-                                    <FormLabel
-                                      htmlFor={`unacc-${i}`}
-                                      className="cursor-pointer"
-                                    >
-                                      Unacceptable
-                                    </FormLabel>
-                                  </div>
-                                </RadioGroup>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <TestStatementsSection
+                control={form.control}
+                name="tests"
+                testCount={5}
+              />
             </form>
           </div>
 
