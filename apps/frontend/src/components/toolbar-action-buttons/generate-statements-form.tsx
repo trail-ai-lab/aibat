@@ -1,12 +1,39 @@
 "use client"
 
-import React, { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { IconLoader, IconSparkles } from "@tabler/icons-react"
-import { generateStatementsForTopic, type GenerateStatementsRequest } from "@/lib/api/tests"
+import * as React from "react"
+import { z } from "zod"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
+
+import { Button } from "@/components/ui/button"
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Slider } from "@/components/ui/slider"
+import { IconLoader, IconSparkles } from "@tabler/icons-react"
+import {
+  generateStatementsForTopic,
+  type GenerateStatementsRequest,
+} from "@/lib/api/tests"
+
+const FormSchema = z.object({
+  criteria: z.string(),
+  numStatements: z.number().min(1).max(10),
+})
 
 type GenerateStatementsFormProps = {
   topicName: string
@@ -14,11 +41,46 @@ type GenerateStatementsFormProps = {
   onSuccess: () => void
 }
 
-export function GenerateStatementsForm({ topicName, onClose, onSuccess }: GenerateStatementsFormProps) {
-  const [criteria, setCriteria] = useState("base")
-  const [numStatements, setNumStatements] = useState("5")
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [submitErrorMsg, setSubmitErrorMsg] = useState("")
+export function GenerateStatementsForm({
+  topicName,
+  onClose,
+  onSuccess,
+}: GenerateStatementsFormProps) {
+  const [isGenerating, setIsGenerating] = React.useState(false)
+
+  const form = useForm<z.infer<typeof FormSchema>>({
+    resolver: zodResolver(FormSchema),
+    defaultValues: {
+      criteria: "base",
+      numStatements: 3,
+    },
+  })
+
+  const watchedStatements = form.watch("numStatements")
+
+  const onSubmit = async (data: z.infer<typeof FormSchema>) => {
+    setIsGenerating(true)
+
+    const generationData: GenerateStatementsRequest = {
+      topic: topicName,
+      criteria: data.criteria,
+      num_statements: data.numStatements,
+    }
+
+    try {
+      const result = await generateStatementsForTopic(generationData)
+      toast.success(
+        `Successfully generated ${result.added_count} statements for "${topicName}"!`
+      )
+      onSuccess()
+      onClose()
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to generate statements")
+    } finally {
+      setIsGenerating(false)
+    }
+  }
 
   const criteriaOptions = [
     { value: "base", label: "Base - Similar variations" },
@@ -33,97 +95,91 @@ export function GenerateStatementsForm({ topicName, onClose, onSuccess }: Genera
     { value: "cognates", label: "Cognates - Similar sounding words" },
     { value: "colloquial", label: "Colloquial - Informal language" },
     { value: "loan_word", label: "Loan Words - Borrowed words" },
-    { value: "dialect", label: "Dialect - Regional variations" }
+    { value: "dialect", label: "Dialect - Regional variations" },
   ]
 
-  const handleGenerateStatements = async () => {
-    setIsGenerating(true)
-    setSubmitErrorMsg("")
-
-    const generationData: GenerateStatementsRequest = {
-      topic: topicName,
-      criteria: criteria,
-      num_statements: parseInt(numStatements)
-    }
-
-    try {
-      const result = await generateStatementsForTopic(generationData)
-      toast.success(`Successfully generated ${result.added_count} statements for "${topicName}"!`)
-      onSuccess()
-      onClose()
-    } catch (error) {
-      console.error(error)
-      setSubmitErrorMsg(error instanceof Error ? error.message : "Failed to generate statements")
-    } finally {
-      setIsGenerating(false)
-    }
-  }
-
   return (
-    <div className="w-full flex flex-col max-h-[70vh] overflow-y-auto">
-      <div className="px-6 py-4 w-full space-y-6">
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="criteria" className="text-sm font-bold">
-              Generation Criteria:
-            </Label>
-            <Select value={criteria} onValueChange={setCriteria}>
-              <SelectTrigger id="criteria">
-                <SelectValue placeholder="Select generation criteria" />
-              </SelectTrigger>
-              <SelectContent>
-                {criteriaOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Choose how the AI should generate new statements based on existing ones.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="num-statements" className="text-sm font-bold">
-              Number of Statements:
-            </Label>
-            <Select value={numStatements} onValueChange={setNumStatements}>
-              <SelectTrigger id="num-statements">
-                <SelectValue placeholder="Select number of statements" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="3">3 statements</SelectItem>
-                <SelectItem value="5">5 statements</SelectItem>
-                <SelectItem value="10">10 statements</SelectItem>
-                <SelectItem value="15">15 statements</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4 pt-4">
-          {isGenerating ? (
-            <Button disabled className="w-40">
-              <IconLoader className="w-4 h-4 mr-2 animate-spin" />
-              Generating...
-            </Button>
-          ) : (
-            <Button onClick={handleGenerateStatements}>
-              <IconSparkles className="w-4 h-4 mr-2" />
-              Generate Statements
-            </Button>
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-6 max-h-[70vh] overflow-y-auto px-6 py-4"
+      >
+        <FormField
+          control={form.control}
+          name="criteria"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Generation Criteria</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select generation criteria" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {criteriaOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                Choose how the AI should generate new statements based on
+                existing ones.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
           )}
-          <Button variant="outline" onClick={onClose} className="w-32">
+        />
+
+        <FormField
+          control={form.control}
+          name="numStatements"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Number of Statements: {watchedStatements}</FormLabel>
+              <FormControl>
+                <Slider
+                  value={[field.value]}
+                  onValueChange={(val) => field.onChange(val[0])}
+                  min={1}
+                  max={10}
+                  step={1}
+                />
+              </FormControl>
+              <FormDescription>
+                Use the slider to choose how many statements to generate.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="space-y-4 pt-4">
+          <Button type="submit" disabled={isGenerating} className="w-full">
+            {isGenerating ? (
+              <>
+                <IconLoader className="w-4 h-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <IconSparkles className="w-4 h-4 mr-2" />
+                Generate Statements
+              </>
+            )}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            className="w-full"
+          >
             Cancel
           </Button>
-          {submitErrorMsg && (
-            <div className="text-sm text-red-600 font-light">
-              {submitErrorMsg}
-            </div>
-          )}
         </div>
-      </div>
-    </div>
+      </form>
+    </Form>
   )
 }

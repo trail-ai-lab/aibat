@@ -1,223 +1,230 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import * as React from "react"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { toast } from "sonner"
+import { addTopic } from "@/lib/api/topics"
 import { Button } from "@/components/ui/button"
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { IconLoader } from "@tabler/icons-react"
-import { addTopic } from "@/lib/api/topics"
-import { toast } from "sonner"
+import { TestStatementsSection } from "@/components/shared/test-statements-section"
 
-type AddTopicFormProps = {
+const formSchema = z.object({
+  topic: z.string().min(1, "Topic is required"),
+  prompt: z.string().min(1, "Prompt is required"),
+  isDefaultGradingPrompt: z.boolean(),
+  tests: z
+    .array(
+      z.object({
+        test: z.string().optional(),
+        ground_truth: z.enum(["acceptable", "unacceptable"]).optional(),
+      })
+    )
+    .length(5),
+})
+
+type FormValues = z.infer<typeof formSchema>
+
+export function AddTopicForm({
+  onClose,
+  onSuccess,
+}: {
   onClose: () => void
   onSuccess: (topicName: string) => void
-}
+}) {
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      topic: "",
+      prompt: "",
+      isDefaultGradingPrompt: true,
+      tests: Array(5).fill({ test: "", ground_truth: undefined }),
+    },
+  })
 
-export function AddTopicForm({ onClose, onSuccess }: AddTopicFormProps) {
-  const [topic, setTopic] = useState("")
-  const [prompt, setPrompt] = useState("")
-  const [isDefaultGradingPrompt, setIsDefaultGradingPrompt] = useState(true)
+  const {
+    watch,
+    setValue,
+    handleSubmit,
+    formState: { isSubmitting },
+  } = form
 
-  const [tests, setTests] = useState(Array(10).fill(""))
-  const [groundTruths, setGroundTruths] = useState(Array(10).fill(""))
+  const topic = watch("topic")
+  const isDefaultGradingPrompt = watch("isDefaultGradingPrompt")
 
-  const [isAddingTopic, setIsAddingTopic] = useState(false)
-  const [submitErrorMsg, setSubmitErrorMsg] = useState("")
+  React.useEffect(() => {
+    if (isDefaultGradingPrompt) {
+      setValue(
+        "prompt",
+        `Is this sentence an acceptable or unacceptable statement about ${
+          topic || "{topic}"
+        }? Here is the sentence:`
+      )
+    }
+  }, [isDefaultGradingPrompt, topic, setValue])
 
-  const onTestChange = (index: number, value: string) => {
-    const newTests = [...tests]
-    newTests[index] = value
-    setTests(newTests)
-  }
+  const onSubmit = async (values: FormValues) => {
+    const validTests = values.tests.flatMap(({ test, ground_truth }) => {
+      if (test?.trim()) {
+        if (!ground_truth) {
+          throw new Error("Please select a ground truth for all filled tests.")
+        }
+        return [{ test: test.trim(), ground_truth }]
+      }
+      return []
+    })
 
-  const onCorrectnessChange = (index: number, value: string) => {
-    const newGroundTruths = [...groundTruths]
-    newGroundTruths[index] = value
-    setGroundTruths(newGroundTruths)
-  }
-
-  const handleAddTopic = async () => {
-    setIsAddingTopic(true)
-    setSubmitErrorMsg("")
-
-    const _topic = topic.trim()
-    const _prompt = prompt.trim()
-
-    if (_topic === "" || _prompt === "" || tests.every((test) => test === "")) {
-      let errorMsg = "Please enter "
-      if (_topic === "" || _prompt === "")
-        errorMsg += "a topic name and prompt "
-      if (tests.every((test) => test === ""))
-        errorMsg += `${_topic === "" ? "and" : ""} at least one test`
-      setSubmitErrorMsg(errorMsg)
-      setIsAddingTopic(false)
+    if (validTests.length === 0) {
+      toast.error("Please enter at least one test statement.")
       return
     }
 
-    const testData = []
-
-    for (let i = 0; i < tests.length; i++) {
-      const test = tests[i].trim()
-      if (test !== "") {
-        if (groundTruths[i] === "") {
-          setSubmitErrorMsg("Please select the ground truth for each test")
-          setIsAddingTopic(false)
-          return
-        }
-        testData.push({
-          test,
-          ground_truth: groundTruths[i] as "acceptable" | "unacceptable",
-        })
-      }
-    }
-
     const topicData = {
-      topic: _topic,
-      prompt_topic: _prompt,
-      tests: testData,
-      default: false
+      topic: values.topic.trim(),
+      prompt_topic: values.prompt.trim(),
+      tests: validTests,
+      default: false,
     }
 
     try {
       await addTopic(topicData)
-      toast.success(`Topic "${_topic}" created successfully!`)
-      onSuccess(_topic)
+      toast.success(`Topic "${topicData.topic}" created successfully!`)
+      onSuccess(topicData.topic)
       onClose()
     } catch (error) {
       console.error(error)
-      setSubmitErrorMsg(error instanceof Error ? error.message : "Failed to add topic")
-    } finally {
-      setIsAddingTopic(false)
-    }
-  }
-
-  useEffect(() => {
-    if (isDefaultGradingPrompt) {
-      setPrompt(`Is this sentence an acceptable or unacceptable statement about ${topic || "{topic}"}? Here is the sentence:`)
-    } else {
-      setPrompt("")
-    }
-  }, [isDefaultGradingPrompt, topic])
-
-  const onTopicChange = (newTopic: string) => {
-    setTopic(newTopic)
-    if (isDefaultGradingPrompt) {
-      setPrompt(`Is this sentence an acceptable or unacceptable statement about ${newTopic || "{topic}"}? Here is the sentence:`)
+      toast.error("Failed to add topic")
     }
   }
 
   return (
-    <div className="w-full flex flex-col max-h-[80vh] overflow-y-auto">
-      <div className="flex flex-col items-center justify-center h-full">
-        <div className="px-8 py-6 mb-4 w-full space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="topic" className="text-sm font-bold">
-              Topic:
-            </Label>
-            <Input
-              id="topic"
-              type="text"
-              placeholder="e.g., Physics Energy Concepts"
-              value={topic}
-              onChange={(e) => onTopicChange(e.target.value)}
-              className="w-2/5"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="prompt" className="text-sm font-bold">
-              Assessment Prompt:
-            </Label>
-            <div className="flex items-center space-x-2 mb-2">
-              <Checkbox
-                id="default-prompt"
-                checked={isDefaultGradingPrompt}
-                onCheckedChange={(checked) => setIsDefaultGradingPrompt(checked === true)}
-              />
-              <Label htmlFor="default-prompt" className="text-sm font-normal">
-                Use default prompt
-              </Label>
-            </div>
-            <Input
-              id="prompt"
-              type="text"
-              placeholder="i.e. The following tests describe the concept of {topic}"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              className="w-4/5"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-sm font-bold">Tests:</Label>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {Array.from({ length: 10 }, (_, i) => (
-                <div key={i} className="flex gap-2 items-center">
-                  <Input
-                    type="text"
-                    placeholder={`Test statement ${i + 1}`}
-                    value={tests[i]}
-                    onChange={(e) => onTestChange(i, e.target.value)}
-                    className="flex-1"
-                  />
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        id={`acceptable-${i}`}
-                        name={`ground-truth-${i}`}
-                        value="acceptable"
-                        checked={groundTruths[i] === "acceptable"}
-                        onChange={(e) => onCorrectnessChange(i, e.target.value)}
-                        className="form-radio"
-                      />
-                      <Label htmlFor={`acceptable-${i}`} className="text-sm">
-                        Acceptable
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        id={`unacceptable-${i}`}
-                        name={`ground-truth-${i}`}
-                        value="unacceptable"
-                        checked={groundTruths[i] === "unacceptable"}
-                        onChange={(e) => onCorrectnessChange(i, e.target.value)}
-                        className="form-radio"
-                      />
-                      <Label htmlFor={`unacceptable-${i}`} className="text-sm">
-                        Unacceptable
-                      </Label>
-                    </div>
-                  </div>
+    <div className="w-full max-w-4xl mx-auto px-4">
+      <Form {...form}>
+        <div className="flex flex-col max-h-[calc(80vh-8rem)] overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <form
+              id="add-topic-form"
+              onSubmit={handleSubmit(onSubmit)}
+              className="space-y-6"
+            >
+              {/* Basic Information Section */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold">Topic Information</h3>
                 </div>
-              ))}
-            </div>
+                <div className="grid gap-4 sm:grid-cols-12">
+                  <FormField
+                    control={form.control}
+                    name="topic"
+                    render={({ field }) => (
+                      <FormItem className="sm:col-span-3">
+                        <FormLabel>Topic Name</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="e.g., Energy Concepts"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="prompt"
+                    render={({ field }) => (
+                      <FormItem className="sm:col-span-9">
+                        <FormLabel>Assessment Prompt</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="Prompt related to topic"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="isDefaultGradingPrompt"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(checked) =>
+                            field.onChange(checked === true)
+                          }
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="text-sm font-medium">
+                          Use default grading prompt
+                        </FormLabel>
+                        <p className="text-xs text-muted-foreground">
+                          Automatically generate a standard assessment prompt
+                          based on the topic name.
+                        </p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Test Statements Section */}
+              <TestStatementsSection
+                control={form.control}
+                name="tests"
+                testCount={5}
+              />
+            </form>
           </div>
 
-          <div className="flex items-center gap-4 pt-4">
-            {isAddingTopic ? (
-              <Button disabled className="w-32">
-                <IconLoader className="w-4 h-4 mr-2 animate-spin" />
-                Adding...
+          {/* Fixed Action Buttons */}
+          <div className="border-t bg-background p-6">
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-start sm:space-x-2 space-y-2 space-y-reverse sm:space-y-0">
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full sm:w-auto"
+                form="add-topic-form"
+              >
+                {isSubmitting ? (
+                  <>
+                    <IconLoader className="w-4 h-4 mr-2 animate-spin" />
+                    Adding Topic...
+                  </>
+                ) : (
+                  "Add Topic"
+                )}
               </Button>
-            ) : (
-              <Button onClick={handleAddTopic} className="w-32">
-                Add Topic
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                className="w-full sm:w-auto"
+              >
+                Cancel
               </Button>
-            )}
-            <Button variant="outline" onClick={onClose} className="w-32">
-              Cancel
-            </Button>
-            {submitErrorMsg && (
-              <div className="text-sm text-red-600 font-light">
-                {submitErrorMsg}
-              </div>
-            )}
+            </div>
           </div>
         </div>
-      </div>
+      </Form>
     </div>
   )
 }

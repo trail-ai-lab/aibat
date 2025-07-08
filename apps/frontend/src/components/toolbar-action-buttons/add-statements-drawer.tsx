@@ -1,4 +1,4 @@
-// apps/frontend/src/components/add-statements-button.tsx
+// apps/frontend/src/components/add-statements-drawer.tsx
 
 "use client"
 
@@ -27,7 +27,7 @@ export function AddStatementsButton({
   currentTopic,
   isOpen,
   onOpenChange,
-  onSuccess, // ✅ accept this
+  onSuccess,
   inDropdown = false,
 }: AddStatementsButtonProps) {
   return (
@@ -37,29 +37,33 @@ export function AddStatementsButton({
           variant="outline"
           size="sm"
           disabled={!currentTopic}
-          title={!currentTopic ? "Select a topic to add statements" : "Add statements to this topic"}
+          title={
+            !currentTopic
+              ? "Select a topic to add statements"
+              : "Add statements to this topic"
+          }
           className={inDropdown ? "w-full justify-start" : "justify-start"}
         >
           <IconPlus />
-          <span className={inDropdown ? "ml-2" : "hidden xl:inline"}>Add Statements</span>
+          <span className={inDropdown ? "ml-2" : "hidden xl:inline"}>
+            Add Statements
+          </span>
         </Button>
       </DrawerTrigger>
       <DrawerContent>
-        <DrawerHeader className="gap-1">
+        <DrawerHeader>
           <DrawerTitle>Add Statements</DrawerTitle>
           <DrawerDescription>
-            Add new test statements to the current topic
+            Add new test statements to the current topic: {currentTopic}
           </DrawerDescription>
         </DrawerHeader>
-        <div className="flex flex-col gap-4 overflow-y-auto px-4">
-          {currentTopic && (
-            <AddStatementsForm
-              topicName={currentTopic}
-              onClose={() => onOpenChange(false)}
-              onSuccess={onSuccess}
-            />
-          )}
-        </div>
+        {currentTopic && (
+          <AddStatementsForm
+            topicName={currentTopic}
+            onClose={() => onOpenChange(false)}
+            onSuccess={onSuccess}
+          />
+        )}
       </DrawerContent>
     </Drawer>
   )

@@ -1,3 +1,4 @@
+// apps/frontend/src/components/data-table/data-table.tsx
 "use client"
 
 import * as React from "react"

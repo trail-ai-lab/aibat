@@ -277,7 +277,9 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
   },
   {
     accessorKey: "criteria",
-    header: "Criteria",
+    header: () => (
+    <div className="text-center w-full">Criteria</div>
+  ),
     cell: ({ row, table }) => {
       const isChildRow = !!row.original.parent_id;
       const expandedRows = (table.options.meta as Record<string, unknown>)?.expandedRows as Set<string> || new Set();
@@ -303,18 +305,20 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
       }
       
       return (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 w-6 p-0"
-          onClick={() => toggleExpanded?.(row.original.id)}
-        >
-          {isExpanded ? (
-            <IconChevronUp className="h-4 w-4" />
-          ) : (
-            <IconChevronDown className="h-4 w-4" />
-          )}
-        </Button>
+        <div className="flex justify-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0"
+            onClick={() => toggleExpanded?.(row.original.id)}
+          >
+            {isExpanded ? (
+              <IconChevronUp className="h-4 w-4" />
+            ) : (
+              <IconChevronDown className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
       );
     },
   },

@@ -1,14 +1,39 @@
-// apps/frontend/src/components/add-statements-form.tsx
-
 "use client"
 
-import React, { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { IconLoader } from "@tabler/icons-react"
-import { addStatementsToTopic, type AddStatementsRequest } from "@/lib/api/tests"
+import * as React from "react"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
+import {
+  addStatementsToTopic,
+  type AddStatementsRequest,
+} from "@/lib/api/tests"
+import { Button } from "@/components/ui/button"
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { IconLoader } from "@tabler/icons-react"
+import { TestStatementsSection } from "@/components/shared/test-statements-section"
+
+const formSchema = z.object({
+  tests: z
+    .array(
+      z.object({
+        test: z.string().optional(),
+        ground_truth: z.enum(["acceptable", "unacceptable"]).optional(),
+      })
+    )
+    .length(10),
+})
+
+type FormValues = z.infer<typeof formSchema>
 
 type AddStatementsFormProps = {
   topicName: string
@@ -16,144 +41,108 @@ type AddStatementsFormProps = {
   onSuccess: () => void
 }
 
-export function AddStatementsForm({ topicName, onClose, onSuccess }: AddStatementsFormProps) {
-  // Array of tests and ground truths
-  const [tests, setTests] = useState(Array(10).fill(""))
-  const [groundTruths, setGroundTruths] = useState(Array(10).fill(""))
+export function AddStatementsForm({
+  topicName,
+  onClose,
+  onSuccess,
+}: AddStatementsFormProps) {
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      tests: Array(10).fill({ test: "", ground_truth: undefined }),
+    },
+  })
 
-  const [isAddingStatements, setIsAddingStatements] = useState(false)
-  const [submitErrorMsg, setSubmitErrorMsg] = useState("")
+  const {
+    handleSubmit,
+    formState: { isSubmitting },
+  } = form
 
-  const onTestChange = (index: number, value: string) => {
-    const newTests = [...tests]
-    newTests[index] = value
-    setTests(newTests)
-  }
-
-  const onCorrectnessChange = (index: number, value: string) => {
-    const newGroundTruths = [...groundTruths]
-    newGroundTruths[index] = value
-    setGroundTruths(newGroundTruths)
-  }
-
-  const handleAddStatements = async () => {
-    setIsAddingStatements(true)
-    setSubmitErrorMsg("")
-    
-    if (tests.every((test) => test === "")) {
-      setSubmitErrorMsg("Please enter at least one test statement")
-      setIsAddingStatements(false)
-      return
-    }
-
-    const testData = []
-
-    for (let i = 0; i < tests.length; i++) {
-      const test = tests[i].trim()
-      if (test !== "") {
-        if (groundTruths[i] === "") {
-          setSubmitErrorMsg("Please select the ground truth for each test statement")
-          setIsAddingStatements(false)
-          return
+  const onSubmit = async (values: FormValues) => {
+    const validTests = values.tests.flatMap(({ test, ground_truth }) => {
+      if (test?.trim()) {
+        if (!ground_truth) {
+          toast.error("Please select a ground truth for all filled tests.")
+          throw new Error("Please select a ground truth for all filled tests.")
         }
-        testData.push({
-          test: test,
-          ground_truth: groundTruths[i] as "acceptable" | "unacceptable",
-        })
+        return [{ title: test.trim(), ground_truth }]
       }
+      return []
+    })
+
+    if (validTests.length === 0) {
+      toast.error("Please enter at least one test statement.")
+      return
     }
 
     const statementsData: AddStatementsRequest = {
       topic: topicName,
-      tests: testData,
+      tests: validTests,
     }
 
     try {
-      const result = await addStatementsToTopic(statementsData)
-      toast.success(`Successfully added ${testData.length} statements to "${topicName}"!`)
+      await addStatementsToTopic(statementsData)
+      toast.success(
+        `Successfully added ${validTests.length} statements to "${topicName}"!`
+      )
       onSuccess()
       onClose()
     } catch (error) {
       console.error(error)
-      setSubmitErrorMsg(error instanceof Error ? error.message : "Failed to add statements")
-    } finally {
-      setIsAddingStatements(false)
+      toast.error("Failed to add statements")
     }
   }
 
   return (
-    <div className="w-full flex flex-col max-h-[70vh] overflow-y-auto">
-      <div className="px-6 py-4 w-full space-y-6">
-        <div className="space-y-2">
-          <Label className="text-sm font-bold">
-            Test Statements:
-          </Label>
-          <div className="space-y-2 max-h-60 overflow-y-auto">
-            {Array.from({ length: 10 }, (_, i) => (
-              <div key={i} className="flex gap-2 items-center">
-                <Input
-                  type="text"
-                  placeholder={`Test statement ${i + 1}`}
-                  value={tests[i]}
-                  onChange={(e) => onTestChange(i, e.target.value)}
-                  className="flex-1"
-                />
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      id={`acceptable-${i}`}
-                      name={`ground-truth-${i}`}
-                      value="acceptable"
-                      checked={groundTruths[i] === "acceptable"}
-                      onChange={(e) => onCorrectnessChange(i, e.target.value)}
-                      className="form-radio"
-                    />
-                    <Label htmlFor={`acceptable-${i}`} className="text-sm">
-                      Acceptable
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      id={`unacceptable-${i}`}
-                      name={`ground-truth-${i}`}
-                      value="unacceptable"
-                      checked={groundTruths[i] === "unacceptable"}
-                      onChange={(e) => onCorrectnessChange(i, e.target.value)}
-                      className="form-radio"
-                    />
-                    <Label htmlFor={`unacceptable-${i}`} className="text-sm">
-                      Unacceptable
-                    </Label>
-                  </div>
-                </div>
-              </div>
-            ))}
+    <div className="w-full max-w-4xl mx-auto px-4">
+      <Form {...form}>
+        <div className="flex flex-col max-h-[calc(80vh-8rem)] overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <form
+              id="add-statements-form"
+              onSubmit={handleSubmit(onSubmit)}
+              className="space-y-6"
+            >
+              {/* Test Statements Section */}
+              <TestStatementsSection
+                control={form.control}
+                name="tests"
+                testCount={10}
+                description="Add test statements and mark them as acceptable or unacceptable. At least one test is required."
+              />
+            </form>
+          </div>
+
+          {/* Fixed Action Buttons */}
+          <div className="border-t bg-background p-6">
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-start sm:space-x-2 space-y-2 space-y-reverse sm:space-y-0">
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full sm:w-auto"
+                form="add-statements-form"
+              >
+                {isSubmitting ? (
+                  <>
+                    <IconLoader className="w-4 h-4 mr-2 animate-spin" />
+                    Adding Statements...
+                  </>
+                ) : (
+                  "Add Statements"
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                className="w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+            </div>
           </div>
         </div>
-
-        <div className="flex items-center gap-4 pt-4">
-          {isAddingStatements ? (
-            <Button disabled className="w-32">
-              <IconLoader className="w-4 h-4 mr-2 animate-spin" />
-              Adding...
-            </Button>
-          ) : (
-            <Button onClick={handleAddStatements} className="w-32">
-              Add Statements
-            </Button>
-          )}
-          <Button variant="outline" onClick={onClose} className="w-32">
-            Cancel
-          </Button>
-          {submitErrorMsg && (
-            <div className="text-sm text-red-600 font-light">
-              {submitErrorMsg}
-            </div>
-          )}
-        </div>
-      </div>
+      </Form>
     </div>
   )
 }

@@ -2,8 +2,8 @@
 
 import * as React from "react"
 import { AnalyzeAIBehaviorButton } from "@/components/toolbar-action-buttons/analyze-ai-behavior-button"
-import { CriteriaButton } from "@/components/toolbar-action-buttons/criteria-button"
-import { AddStatementsButton } from "@/components/toolbar-action-buttons/add-statements-button"
+import { CriteriaButton } from "@/components/toolbar-action-buttons/criteria-drawer"
+import { AddStatementsButton } from "@/components/toolbar-action-buttons/add-statements-drawer"
 import { GenerateStatementsButton } from "@/components/toolbar-action-buttons/generate-statements-drawer"
 import { type PerturbationResponse } from "@/types/perturbations"
 import { useToolbarCollapse } from "@/hooks/use-mobile"

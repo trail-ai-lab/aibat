@@ -2,66 +2,50 @@
 
 import * as React from "react"
 import {
-  IconSettings,
-  IconRobot,
-  IconX,
-} from "@tabler/icons-react"
-import {
   Drawer,
   DrawerContent,
+  DrawerDescription,
   DrawerHeader,
   DrawerTitle,
-  DrawerDescription,
-  DrawerClose,
 } from "@/components/ui/drawer"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { ModelSelector } from "@/components/sidebar-nav/model-selector"
+import { IconSettings } from "@tabler/icons-react"
+import { SettingsForm } from "@/components/sidebar-nav/settings-form"
 
 interface SettingsDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   currentTopic?: string
+  onSuccess?: () => void
 }
 
 export function SettingsDrawer({
   open,
   onOpenChange,
   currentTopic,
+  onSuccess,
 }: SettingsDrawerProps) {
+  const handleSuccess = () => {
+    onSuccess?.()
+    onOpenChange(false)
+  }
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[85vh]">
         <div className="mx-auto w-full max-w-md">
-          <DrawerHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <IconSettings className="size-5" />
-                <DrawerTitle>Settings</DrawerTitle>
-              </div>
-              <DrawerClose asChild>
-                <Button variant="ghost" size="icon" className="size-6">
-                  <IconX className="size-4" />
-                </Button>
-              </DrawerClose>
-            </div>
+          <DrawerHeader className="gap-1">
+            <DrawerTitle>Settings</DrawerTitle>
             <DrawerDescription>
               Configure your AI model settings.
             </DrawerDescription>
           </DrawerHeader>
 
-          <div className="px-4 pb-4 space-y-6">
-            {/* Model Selection Section */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <IconRobot className="size-4" />
-                <Label className="text-sm font-medium">AI Model</Label>
-              </div>
-              <div className="pl-6">
-                <ModelSelector currentTopic={currentTopic} />
-              </div>
-            </div>
+          <div className="flex flex-col gap-4 overflow-y-auto px-4">
+            <SettingsForm
+              currentTopic={currentTopic}
+              onClose={() => onOpenChange(false)}
+              onSuccess={handleSuccess}
+            />
           </div>
         </div>
       </DrawerContent>

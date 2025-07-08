@@ -11,18 +11,12 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select"
-import {
-  CriteriaType,
-  CriteriaTypeSelector,
-} from "@/components/toolbar-action-buttons/criteria-type-selector"
+import { CriteriaTypeSelector } from "@/components/toolbar-action-buttons/criteria-type-selector"
 import { useCriteria } from "@/hooks/use-criteria"
 import { Button } from "@/components/ui/button"
-import {
-  fetchUserCriteria,
-  saveUserCriteria,
-  type CriteriaTypeInput,
-} from "@/lib/api/criteria"
+import { fetchUserCriteria, saveUserCriteria } from "@/lib/api/criteria"
 import { toast } from "sonner"
+import { CriteriaType } from "@/types/criteria"
 
 interface CriteriaEditorProps {
   onClose: () => void
@@ -42,7 +36,7 @@ export function CriteriaEditor({ onClose, currentTopic }: CriteriaEditorProps) {
       const config = criteriaConfigs.find((c) => c.config === appConfig)
       if (!config || !currentTopic) return
 
-      const defaultTypes: CriteriaType[] = config.types.map((t) => ({
+      const defaultTypes: CriteriaType[] = config.types.map((t: any) => ({
         ...t,
         isDefault: true,
       }))
@@ -54,7 +48,9 @@ export function CriteriaEditor({ onClose, currentTopic }: CriteriaEditorProps) {
         // Combine: include user types (with isDefault false) + ensure only saved ones are selected
         const combinedItems: CriteriaType[] = [
           ...defaultTypes,
-          ...userTypes.filter((t) => !defaultTypes.find((d) => d.name === t.name)),
+          ...userTypes.filter(
+            (t) => !defaultTypes.find((d) => d.name === t.name)
+          ),
         ]
 
         const selected = new Set(userTypes.map((t) => t.name))
@@ -74,12 +70,11 @@ export function CriteriaEditor({ onClose, currentTopic }: CriteriaEditorProps) {
     }
   }, [appConfig, criteriaConfigs, currentTopic, loading])
 
-
   // Update state when config changes
   useEffect(() => {
     const config = criteriaConfigs.find((c) => c.config === appConfig)
     if (config) {
-      const defaultTypes: CriteriaType[] = config.types.map((t) => ({
+      const defaultTypes: CriteriaType[] = config.types.map((t: any) => ({
         ...t,
         isDefault: true,
       }))
@@ -92,7 +87,15 @@ export function CriteriaEditor({ onClose, currentTopic }: CriteriaEditorProps) {
     setAppConfig(value)
   }
 
+  // Set default config to first item when loaded
+  useEffect(() => {
+    if (!loading && criteriaConfigs.length > 0 && !appConfig) {
+      setAppConfig(criteriaConfigs[0].config)
+    }
+  }, [loading, criteriaConfigs, appConfig])
+
   const handleSave = async () => {
+    console.log("Criteria Save: ", currentTopic)
     if (!currentTopic) return
 
     const selected = items
@@ -109,44 +112,57 @@ export function CriteriaEditor({ onClose, currentTopic }: CriteriaEditorProps) {
     }
   }
 
-
   return (
-    <div className="w-full h-full flex flex-col space-y-6 p-6">
-      {/* Criteria Configuration Dropdown */}
-      <div className="flex items-center gap-4">
-        <Label htmlFor="config-select">Criteria Configuration:</Label>
-        <Select value={appConfig} onValueChange={handleConfigChange}>
-          <SelectTrigger className="w-48" id="config-select">
-            <SelectValue placeholder="Select configuration" />
-          </SelectTrigger>
-          <SelectContent>
-            {criteriaConfigs.map((config) => (
-              <SelectItem key={config.config} value={config.config}>
-                {config.config}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+    <div className="w-full max-w-4xl mx-auto px-4">
+      <div className="flex flex-col max-h-[calc(80vh-8rem)] overflow-hidden">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Criteria Configuration Dropdown */}
+          <div className="flex items-center gap-4">
+            <Label htmlFor="config-select">Criteria Configuration:</Label>
+            <Select value={appConfig} onValueChange={handleConfigChange}>
+              <SelectTrigger className="w-48" id="config-select">
+                <SelectValue placeholder="Select configuration" />
+              </SelectTrigger>
+              <SelectContent>
+                {criteriaConfigs.map((config) => (
+                  <SelectItem key={config.config} value={config.config}>
+                    {config.config}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      <Separator />
+          <Separator />
 
-      {/* Criteria Type Selector */}
-      <div className="space-y-2">
-        <Label>Types:</Label>
-        <CriteriaTypeSelector
-          items={items}
-          selectedItems={selectedItems}
-          onChangeItems={setItems}
-          onChangeSelected={setSelectedItems}
-        />
-      </div>
+          {/* Criteria Type Selector */}
+          <div className="space-y-4">
+            <Label>Types:</Label>
+            <CriteriaTypeSelector
+              items={items}
+              selectedItems={selectedItems}
+              onChangeItems={setItems}
+              onChangeSelected={setSelectedItems}
+            />
+          </div>
+        </div>
 
-      <Separator />
-
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <Button onClick={handleSave}>Save Criteria</Button>
+        {/* Fixed Action Buttons */}
+        <div className="border-t bg-background p-6">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-start sm:space-x-2 space-y-2 space-y-reverse sm:space-y-0">
+            <Button onClick={handleSave} className="w-full sm:w-auto">
+              Save Criteria
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   )
