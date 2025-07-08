@@ -34,7 +34,7 @@ import {
 } from "@tabler/icons-react"
 
 import { TableActionsToolbar } from "@/components/toolbar-action-buttons/table-actions-toolbar"
-import { ChartPieLabel } from "@/components/evaluations/char-area-interactive"
+import { ChartPieLabel } from "@/components/evaluations/char-pie-label"
 import { ChartTooltipDefault } from "@/components/evaluations/chart-tooltip-default"
 
 import { PerturbationResponse } from "@/types/perturbations"
@@ -320,8 +320,8 @@ export function DataTable({
 
       <TabsContent value="evaluations" className="flex flex-col px-4 lg:px-6">
         <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-          <ChartPieLabel />
-          <ChartTooltipDefault />
+          <ChartPieLabel data={data} topic={currentTopic} />
+          <ChartTooltipDefault data={data} topic={currentTopic} />
           <ChartRadarDots />
         </div>
       </TabsContent>
