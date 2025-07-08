@@ -1,4 +1,4 @@
-// apps/frontend/src/components/add-statements-button.tsx
+// apps/frontend/src/components/add-statements-drawer.tsx
 
 "use client"
 

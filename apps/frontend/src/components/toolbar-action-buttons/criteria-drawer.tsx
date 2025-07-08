@@ -1,4 +1,4 @@
-// apps/frontend/src/components/criteria-manager.tsx
+// apps/frontend/src/components/criteria-drawer.tsx
 
 "use client"
 
@@ -29,11 +29,7 @@ export function CriteriaButton({
   inDropdown = false,
 }: CriteriaButtonProps) {
   return (
-    <Drawer
-      direction="bottom"
-      open={isOpen}
-      onOpenChange={onOpenChange}
-    >
+    <Drawer direction="bottom" open={isOpen} onOpenChange={onOpenChange}>
       <DrawerTrigger asChild>
         <Button
           variant="outline"
@@ -42,22 +38,20 @@ export function CriteriaButton({
           className={inDropdown ? "w-full justify-start" : "justify-start"}
         >
           <IconSettings />
-          <span className={inDropdown ? "ml-2" : "hidden xl:inline"}>Criteria</span>
+          <span className={inDropdown ? "ml-2" : "hidden xl:inline"}>
+            Criteria
+          </span>
         </Button>
       </DrawerTrigger>
       <DrawerContent>
-        <DrawerHeader className="gap-1">
+        <DrawerHeader>
           <DrawerTitle>Criteria Editor</DrawerTitle>
-          <DrawerDescription>
-            {currentTopic}
-          </DrawerDescription>
+          <DrawerDescription>{currentTopic}</DrawerDescription>
         </DrawerHeader>
-        <div className="flex flex-col gap-4 overflow-y-auto px-4">
-          <CriteriaEditor
-            onClose={() => onOpenChange(false)}
-            currentTopic={currentTopic}
-          />
-        </div>
+        <CriteriaEditor
+          onClose={() => onOpenChange(false)}
+          currentTopic={currentTopic}
+        />
       </DrawerContent>
     </Drawer>
   )

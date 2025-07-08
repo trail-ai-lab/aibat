@@ -8,7 +8,6 @@ import { useState } from "react"
 import clsx from "clsx"
 import { CriteriaType } from "@/types/criteria"
 
-
 interface Props {
   items: CriteriaType[]
   selectedItems: Set<string>
@@ -72,7 +71,7 @@ export function CriteriaTypeSelector({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
       <div className="flex gap-4 items-center flex-wrap">
         {items.map((item) => {
           const isChecked = selectedItems.has(item.name)
@@ -117,36 +116,38 @@ export function CriteriaTypeSelector({
       </div>
 
       {activeItem && (
-        <div className="mt-4 border p-4 rounded bg-muted space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="type-name">Type:</Label>
-            <Input
-              id="type-name"
-              value={formState.name}
-              disabled={activeItem !== "NEW_TYPE"}
-              onChange={(e) =>
-                setFormState((f) => ({ ...f, name: e.target.value }))
-              }
-              placeholder="e.g. spelling"
-            />
-          </div>
+        <div className="mt-4 border p-4 rounded space-y-4">
+          <div className="grid gap-4 sm:grid-cols-12">
+            <div className="sm:col-span-3 space-y-2">
+              <Label htmlFor="type-name">Type:</Label>
+              <Input
+                id="type-name"
+                value={formState.name}
+                disabled={activeItem !== "NEW_TYPE"}
+                onChange={(e) =>
+                  setFormState((f) => ({ ...f, name: e.target.value }))
+                }
+                placeholder="e.g. spelling"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="type-prompt">AI Prompt:</Label>
-            <Input
-              id="type-prompt"
-              value={formState.prompt}
-              disabled={items.find((i) => i.name === activeItem)?.isDefault}
-              onChange={(e) =>
-                setFormState((f) => ({ ...f, prompt: e.target.value }))
-              }
-              placeholder="Enter AI prompt"
-            />
+            <div className=" sm:col-span-9 space-y-2">
+              <Label htmlFor="type-prompt">AI Prompt:</Label>
+              <Input
+                id="type-prompt"
+                value={formState.prompt}
+                disabled={items.find((i) => i.name === activeItem)?.isDefault}
+                onChange={(e) =>
+                  setFormState((f) => ({ ...f, prompt: e.target.value }))
+                }
+                placeholder="Enter AI prompt"
+              />
+            </div>
           </div>
 
           <div className="flex gap-2">
             <Button
-              type="button"
+              variant="secondary"
               onClick={handleSave}
               disabled={
                 items.find((i) => i.name === activeItem)?.isDefault === true
@@ -155,11 +156,7 @@ export function CriteriaTypeSelector({
               Save Type
             </Button>
             {!items.find((i) => i.name === activeItem)?.isDefault && (
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={handleDelete}
-              >
+              <Button variant="destructive" onClick={handleDelete}>
                 Delete Type
               </Button>
             )}
