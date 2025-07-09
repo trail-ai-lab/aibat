@@ -8,11 +8,7 @@ import {
   IconUserCircle,
 } from "@tabler/icons-react"
 
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,7 +39,7 @@ export function NavUser() {
   useEffect(() => {
     const user = getAuth().currentUser
     if (user) {
-      setName(user.displayName || "User")
+      setName(user.displayName || "AIBAT User")
       setEmail(user.email || "")
       setAvatar(user.photoURL || "")
     }
@@ -60,7 +56,7 @@ export function NavUser() {
             >
               <Avatar className="h-8 w-8 rounded-lg grayscale">
                 <AvatarImage src={avatar} alt={name} />
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                <AvatarFallback className="rounded-lg">AU</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{name}</span>
@@ -91,21 +87,6 @@ export function NavUser() {
                 </div>
               </div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <IconUserCircle />
-                Account
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <IconCreditCard />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <IconNotification />
-                Notifications
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={logout}>
               <IconLogout />

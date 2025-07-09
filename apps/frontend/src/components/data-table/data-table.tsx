@@ -43,7 +43,8 @@ import { schema } from "./schema"
 import { createColumns } from "./columns"
 import { useExpandedRows } from "./use-expanded-rows"
 import { TableBodyWrapper } from "./table-body-wrapper"
-import { ChartRadarDots } from "../evaluations/chart-radar-dots"
+import { ChartBarPerturbationValidity } from "../evaluations/chart-bar-multiple-perturbations"
+import { ChartBarGroupedVertical } from "../evaluations/chart-bar-horizontal"
 
 export function DataTable({
   data: initialData,
@@ -318,12 +319,19 @@ export function DataTable({
         </div>
       </TabsContent>
 
-      <TabsContent value="evaluations" className="flex flex-col px-4 lg:px-6">
-        <div className="grid auto-rows-min gap-4 md:grid-cols-3">
+      <TabsContent
+        value="evaluations"
+        className="flex flex-col px-4 lg:px-6 space-y-4"
+      >
+        <div className="grid auto-rows-min gap-4 md:grid-cols-2">
           <ChartPieLabel data={data} topic={currentTopic} />
           <ChartTooltipDefault data={data} topic={currentTopic} />
-          <ChartRadarDots />
         </div>
+        <ChartBarPerturbationValidity
+          data={data}
+          topic={currentTopic}
+          perturbations={perturbations}
+        />
       </TabsContent>
     </Tabs>
   )

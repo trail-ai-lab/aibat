@@ -1,6 +1,7 @@
 // src/types/perturbations.ts
 
 export interface PerturbationResponse {
+  agreement: boolean
   id: string
   original_id: string
   title: string
