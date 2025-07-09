@@ -21,15 +21,6 @@ import {
 
 import { PerturbationResponse } from "@/types/perturbations"
 
-interface TestData {
-  id: string
-  statement: string
-  ground_truth: "acceptable" | "unacceptable" | "ungraded"
-  ai_assessment: "pass" | "fail" | "grading"
-  agreement: boolean | null
-  topic: string
-}
-
 interface ChartProps {
   data: TestData[]
   perturbations: Map<string, PerturbationResponse[]>
@@ -38,12 +29,12 @@ interface ChartProps {
 
 const chartConfig = {
   approved: {
-    label: "Approved",
-    color: "var(--chart-1)",
+    label: "Agreement",
+    color: "var(--chart-2)",
   },
   denied: {
-    label: "Denied",
-    color: "var(--chart-2)",
+    label: "Disagreement",
+    color: "var(--chart-1)",
   },
 } satisfies ChartConfig
 
@@ -131,7 +122,7 @@ export function ChartBarPerturbationValidity({
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
-          <BarChart data={chartData} layout="vertical" margin={{ left: 20 }}>
+          <BarChart data={chartData} layout="vertical" margin={{ left: 40 }}>
             <CartesianGrid vertical={false} />
             <YAxis
               dataKey="type"
@@ -139,12 +130,6 @@ export function ChartBarPerturbationValidity({
               tickLine={false}
               tickMargin={10}
               axisLine={false}
-              tickFormatter={(value) => {
-                console.log("YAxis tick value:", value)
-                return typeof value === "string" && value.includes(" - ")
-                  ? value.split(" - ")[0]
-                  : String(value)
-              }}
             />
             <XAxis type="number" />
             <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
@@ -163,7 +148,7 @@ export function ChartBarPerturbationValidity({
           </BarChart>
         </ChartContainer>
       </CardContent>
-      <CardFooter className="flex-col items-start gap-2 text-sm">
+      <CardFooter className="flex-col items-center gap-2 text-sm">
         <div className="flex gap-2 leading-none font-medium">
           {overallApprovalRate}% overall approval{" "}
           <TrendingUp className="h-4 w-4" />

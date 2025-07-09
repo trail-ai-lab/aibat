@@ -44,7 +44,6 @@ import { createColumns } from "./columns"
 import { useExpandedRows } from "./use-expanded-rows"
 import { TableBodyWrapper } from "./table-body-wrapper"
 import { ChartBarPerturbationValidity } from "../evaluations/chart-bar-multiple-perturbations"
-import { ChartBarGroupedVertical } from "../evaluations/chart-bar-horizontal"
 
 export function DataTable({
   data: initialData,

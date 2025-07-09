@@ -22,15 +22,6 @@ import {
 export const description =
   "A pie chart showing agreement between AI and human assessments"
 
-interface TestData {
-  id: string
-  statement: string
-  ground_truth: "acceptable" | "unacceptable" | "ungraded"
-  ai_assessment: "pass" | "fail" | "grading"
-  agreement: boolean | null
-  topic: string
-}
-
 interface ChartPieLabelProps {
   data?: TestData[]
   topic?: string
@@ -41,11 +32,11 @@ const chartConfig = {
     label: "Count",
   },
   match: {
-    label: "Match",
+    label: "Agreement",
     color: "var(--chart-2)",
   },
   mismatch: {
-    label: "Mismatch",
+    label: "Disagreement",
     color: "var(--chart-1)",
   },
 } satisfies ChartConfig
@@ -106,7 +97,7 @@ export function ChartPieLabel({ data = [], topic }: ChartPieLabelProps) {
         <CardDescription>
           {topic
             ? `${topic} - AI vs Human Assessment`
-            : "AI vs Human Assessment Agreement"}
+            : "AI vs Your Assessment Agreement"}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
@@ -116,7 +107,12 @@ export function ChartPieLabel({ data = [], topic }: ChartPieLabelProps) {
         >
           <PieChart>
             <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-            <Pie data={chartData} dataKey="count" label nameKey="category">
+            <Pie
+              data={chartData}
+              dataKey="count"
+              label={false}
+              nameKey="category"
+            >
               <Cell fill="var(--chart-2)" />
               <Cell fill="var(--chart-1)" />
             </Pie>
