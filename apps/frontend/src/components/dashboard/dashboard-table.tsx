@@ -16,6 +16,8 @@ interface Props {
   cachedPerturbations: Map<string, PerturbationResponse[]>
   onPerturbationsUpdate: (newPerturbations: Map<string, PerturbationResponse[]>) => void
   onStatementUpdate?: (updatedItem: z.infer<typeof schema>) => void
+  onDeleteTest?: (testId: string) => void
+  onBulkDeleteTests?: (testIds: string[]) => Promise<void>
 }
 
 export function DashboardTable({
@@ -27,7 +29,9 @@ export function DashboardTable({
   onDataRefresh,
   cachedPerturbations,
   onPerturbationsUpdate,
-  onStatementUpdate
+  onStatementUpdate,
+  onDeleteTest,
+  onBulkDeleteTests
 }: Props) {
   if (loading) {
     return (
@@ -80,6 +84,8 @@ export function DashboardTable({
       cachedPerturbations={cachedPerturbations}
       onPerturbationsUpdate={onPerturbationsUpdate}
       onStatementUpdate={onStatementUpdate}
+      onDeleteTest={onDeleteTest}
+      onBulkDeleteTests={onBulkDeleteTests}
     />
   )
 }

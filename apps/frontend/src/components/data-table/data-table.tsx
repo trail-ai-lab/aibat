@@ -53,6 +53,8 @@ export function DataTable({
   cachedPerturbations,
   onPerturbationsUpdate,
   onStatementUpdate,
+  onDeleteTest,
+  onBulkDeleteTests,
 }: {
   data: z.infer<typeof schema>[]
   onAssessmentChange?: (
@@ -66,6 +68,8 @@ export function DataTable({
     newPerturbations: Map<string, PerturbationResponse[]>
   ) => void
   onStatementUpdate?: (updatedItem: z.infer<typeof schema>) => void
+  onDeleteTest?: (testId: string) => void
+  onBulkDeleteTests?: (testIds: string[]) => Promise<void>
 }) {
   const [data, setData] = React.useState(() => initialData)
 
@@ -118,8 +122,8 @@ export function DataTable({
   }, [onStatementUpdate])
 
   const columns = React.useMemo(
-    () => createColumns(onAssessmentChange, handleStatementUpdate),
-    [onAssessmentChange, handleStatementUpdate]
+    () => createColumns(onAssessmentChange, handleStatementUpdate, onDeleteTest),
+    [onAssessmentChange, handleStatementUpdate, onDeleteTest]
   )
 
   const parentTable = useReactTable({
@@ -240,6 +244,7 @@ export function DataTable({
           isGenerateStatementsOpen={isGenerateStatementsOpen}
           onGenerateStatementsOpenChange={setIsGenerateStatementsOpen}
           onDataRefresh={onDataRefresh}
+          onDeleteTests={onBulkDeleteTests}
         />
       </div>
 

@@ -46,6 +46,7 @@ export default function Page() {
     refreshTests,
     updateTestAssessment: updateLocalTestAssessment,
     updateTestStatement,
+    deleteTestsById,
   } = useDashboard(selectedModel)
 
   const { perturbations, addPerturbations } = usePerturbations(currentTopic || undefined)
@@ -116,6 +117,34 @@ export default function Page() {
     }
   }
 
+  const handleDeleteTest = async (testId: string) => {
+    try {
+      const result = await deleteTestsById([testId])
+      if (result.success) {
+        toast.success("Test deleted successfully")
+      } else {
+        toast.error(result.error || "Failed to delete test")
+      }
+    } catch (error) {
+      console.error("Error deleting test:", error)
+      toast.error("Failed to delete test")
+    }
+  }
+
+  const handleBulkDeleteTests = async (testIds: string[]) => {
+    try {
+      const result = await deleteTestsById(testIds)
+      if (result.success) {
+        toast.success(`${testIds.length} test${testIds.length === 1 ? '' : 's'} deleted successfully`)
+      } else {
+        toast.error(result.error || "Failed to delete tests")
+      }
+    } catch (error) {
+      console.error("Error deleting tests:", error)
+      toast.error("Failed to delete tests")
+    }
+  }
+
   return (
     <SidebarProvider
       style={{
@@ -150,6 +179,8 @@ export default function Page() {
                 cachedPerturbations={perturbations}
                 onPerturbationsUpdate={addPerturbations}
                 onStatementUpdate={handleStatementUpdate}
+                onDeleteTest={handleDeleteTest}
+                onBulkDeleteTests={handleBulkDeleteTests}
               />
               <DashboardHeader
                 topic={currentTopic}

@@ -242,6 +242,37 @@ export async function editTest(testId: string, updates: EditTestRequest): Promis
   return await res.json()
 }
 
+export interface DeleteTestsRequest {
+  test_ids: string[]
+}
+
+export interface DeleteTestsResponse {
+  deleted_count: number
+}
+
+export async function deleteTests(testIds: string[]): Promise<DeleteTestsResponse> {
+  const user = getAuth().currentUser
+  if (!user) throw new Error("User not authenticated")
+
+  const token = await user.getIdToken()
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/tests/delete`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ test_ids: testIds })
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.detail || "Failed to delete tests")
+  }
+
+  return await res.json()
+}
+
 export interface AutoGradeTestsRequest {
   test_ids: string[]
 }
