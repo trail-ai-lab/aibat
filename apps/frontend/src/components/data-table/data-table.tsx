@@ -52,6 +52,7 @@ export function DataTable({
   onDataRefresh,
   cachedPerturbations,
   onPerturbationsUpdate,
+  onStatementUpdate,
 }: {
   data: z.infer<typeof schema>[]
   onAssessmentChange?: (
@@ -64,6 +65,7 @@ export function DataTable({
   onPerturbationsUpdate?: (
     newPerturbations: Map<string, PerturbationResponse[]>
   ) => void
+  onStatementUpdate?: (updatedItem: z.infer<typeof schema>) => void
 }) {
   const [data, setData] = React.useState(() => initialData)
 
@@ -106,9 +108,18 @@ export function DataTable({
     }
   }, [cachedPerturbations])
 
+  const handleStatementUpdate = React.useCallback((updatedItem: z.infer<typeof schema>) => {
+    setData(prevData =>
+      prevData.map(item =>
+        item.id === updatedItem.id ? updatedItem : item
+      )
+    )
+    onStatementUpdate?.(updatedItem)
+  }, [onStatementUpdate])
+
   const columns = React.useMemo(
-    () => createColumns(onAssessmentChange),
-    [onAssessmentChange]
+    () => createColumns(onAssessmentChange, handleStatementUpdate),
+    [onAssessmentChange, handleStatementUpdate]
   )
 
   const parentTable = useReactTable({

@@ -209,6 +209,39 @@ export async function addStatementsToTopic(statementsData: AddStatementsRequest)
   return await res.json()
 }
 
+export interface EditTestRequest {
+  title?: string
+  ground_truth?: "acceptable" | "unacceptable" | "ungraded"
+}
+
+export async function editTest(testId: string, updates: EditTestRequest): Promise<{ message: string }> {
+  const user = getAuth().currentUser
+  if (!user) throw new Error("User not authenticated")
+
+  const token = await user.getIdToken()
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/tests/edit`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      tests: [{
+        id: testId,
+        ...updates
+      }]
+    })
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.detail || "Failed to edit test")
+  }
+
+  return await res.json()
+}
+
 export interface AutoGradeTestsRequest {
   test_ids: string[]
 }

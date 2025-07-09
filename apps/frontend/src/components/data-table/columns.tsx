@@ -3,6 +3,7 @@ import { z } from "zod"
 import { schema } from "./schema"
 import { DragHandle } from "./drag-handle"
 import { TableCellViewer } from "./table-cell-viewer"
+import { EditStatementDrawer } from "./edit-statement-drawer"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -16,7 +17,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ColumnDef } from "@tanstack/react-table"
 
-export const createColumns = (onAssessmentChange?: (id: string, assessment: "acceptable" | "unacceptable") => void): ColumnDef<z.infer<typeof schema>>[] => [
+export const createColumns = (
+  onAssessmentChange?: (id: string, assessment: "acceptable" | "unacceptable") => void,
+  onStatementUpdate?: (updatedItem: z.infer<typeof schema>) => void
+): ColumnDef<z.infer<typeof schema>>[] => [
   {
     id: "drag",
     header: () => null,
@@ -66,7 +70,7 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
           </div>
         );
       }
-      return <TableCellViewer item={row.original} />
+      return <TableCellViewer item={row.original} onUpdate={onStatementUpdate} />
     },
     enableHiding: false,
   },
@@ -339,7 +343,9 @@ export const createColumns = (onAssessmentChange?: (id: string, assessment: "acc
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-32">
-            <DropdownMenuItem>Edit</DropdownMenuItem>
+            <EditStatementDrawer item={row.original} onUpdate={onStatementUpdate}>
+              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Edit</DropdownMenuItem>
+            </EditStatementDrawer>
             <DropdownMenuItem>Make a copy</DropdownMenuItem>
             <DropdownMenuItem>Favorite</DropdownMenuItem>
             <DropdownMenuSeparator />
