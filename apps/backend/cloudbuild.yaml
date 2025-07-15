@@ -16,8 +16,6 @@ steps:
         "--platform",
         "managed",
         "--allow-unauthenticated",
-        "--set-env-vars",
-        "FIREBASE_PROJECT_ID=aibat-c447f,FIREBASE_API_KEY=YOUR_KEY",
       ]
 options:
   logging: CLOUD_LOGGING_ONLY
