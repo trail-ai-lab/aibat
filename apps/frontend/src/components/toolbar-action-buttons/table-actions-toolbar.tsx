@@ -5,6 +5,7 @@ import { AnalyzeAIBehaviorButton } from "@/components/toolbar-action-buttons/ana
 import { CriteriaButton } from "@/components/toolbar-action-buttons/criteria-drawer"
 import { AddStatementsButton } from "@/components/toolbar-action-buttons/add-statements-drawer"
 import { GenerateStatementsButton } from "@/components/toolbar-action-buttons/generate-statements-drawer"
+import { DeleteTestsButton } from "@/components/toolbar-action-buttons/delete-tests-button"
 import { type PerturbationResponse } from "@/types/perturbations"
 import { useToolbarCollapse } from "@/hooks/use-mobile"
 import { Button } from "@/components/ui/button"
@@ -30,6 +31,7 @@ interface TableActionsToolbarProps {
   isGenerateStatementsOpen: boolean
   onGenerateStatementsOpenChange: (open: boolean) => void
   onDataRefresh?: () => void
+  onDeleteTests?: (testIds: string[]) => Promise<void>
 }
 
 export function TableActionsToolbar({
@@ -47,6 +49,7 @@ export function TableActionsToolbar({
   isGenerateStatementsOpen,
   onGenerateStatementsOpenChange,
   onDataRefresh,
+  onDeleteTests,
 }: TableActionsToolbarProps) {
   const shouldCollapse = useToolbarCollapse()
 
@@ -92,6 +95,13 @@ export function TableActionsToolbar({
                 onSuccess={onDataRefresh || (() => {})}
                 inDropdown={true}
               />
+              {onDeleteTests && (
+                <DeleteTestsButton
+                  selectedRowsCount={selectedRowsCount}
+                  selectedTestIds={selectedTestIds}
+                  onDeleteTests={onDeleteTests}
+                />
+              )}
             </div>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -131,6 +141,14 @@ export function TableActionsToolbar({
         onOpenChange={onAddStatementsOpenChange}
         onSuccess={onDataRefresh || (() => {})}
       />
+
+      {onDeleteTests && (
+        <DeleteTestsButton
+          selectedRowsCount={selectedRowsCount}
+          selectedTestIds={selectedTestIds}
+          onDeleteTests={onDeleteTests}
+        />
+      )}
     </div>
   )
 }

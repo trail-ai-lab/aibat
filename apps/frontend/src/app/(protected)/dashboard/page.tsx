@@ -23,6 +23,8 @@ import { useDashboard } from "@/hooks/use-dashboard"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { DashboardTable } from "@/components/dashboard/dashboard-table"
 import { DashboardEmpty } from "@/components/dashboard/dashboard-empty"
+import { z } from "zod"
+import { schema } from "@/components/data-table/schema"
 
 export default function Page() {
   const { selectedModel } = useModels()
@@ -43,6 +45,8 @@ export default function Page() {
     handleTopicEdit,
     refreshTests,
     updateTestAssessment: updateLocalTestAssessment,
+    updateTestStatement,
+    deleteTestsById,
   } = useDashboard(selectedModel)
 
   const { perturbations, addPerturbations } = usePerturbations(currentTopic || undefined)
@@ -98,6 +102,49 @@ export default function Page() {
     }
   }
 
+  const handleStatementUpdate = async (updatedItem: z.infer<typeof schema>) => {
+    // Update the underlying test data
+    updateTestStatement(updatedItem.id, {
+      title: updatedItem.statement,
+      ground_truth: updatedItem.ground_truth
+    })
+    
+    // If AI assessment is in grading state, refresh data after a delay to get updated assessment
+    if (updatedItem.ai_assessment === "grading") {
+      setTimeout(() => {
+        refreshTests()
+      }, 2000) // Wait 2 seconds for AI grading to complete
+    }
+  }
+
+  const handleDeleteTest = async (testId: string) => {
+    try {
+      const result = await deleteTestsById([testId])
+      if (result.success) {
+        toast.success("Test deleted successfully")
+      } else {
+        toast.error(result.error || "Failed to delete test")
+      }
+    } catch (error) {
+      console.error("Error deleting test:", error)
+      toast.error("Failed to delete test")
+    }
+  }
+
+  const handleBulkDeleteTests = async (testIds: string[]) => {
+    try {
+      const result = await deleteTestsById(testIds)
+      if (result.success) {
+        toast.success(`${testIds.length} test${testIds.length === 1 ? '' : 's'} deleted successfully`)
+      } else {
+        toast.error(result.error || "Failed to delete tests")
+      }
+    } catch (error) {
+      console.error("Error deleting tests:", error)
+      toast.error("Failed to delete tests")
+    }
+  }
+
   return (
     <SidebarProvider
       style={{
@@ -131,6 +178,9 @@ export default function Page() {
                 onDataRefresh={refreshTests}
                 cachedPerturbations={perturbations}
                 onPerturbationsUpdate={addPerturbations}
+                onStatementUpdate={handleStatementUpdate}
+                onDeleteTest={handleDeleteTest}
+                onBulkDeleteTests={handleBulkDeleteTests}
               />
               <DashboardHeader
                 topic={currentTopic}

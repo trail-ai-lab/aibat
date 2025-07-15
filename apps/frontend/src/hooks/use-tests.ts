@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { fetchTestsByTopic, autoGradeTests, type TestResponse } from "@/lib/api/tests"
+import { fetchTestsByTopic, autoGradeTests, deleteTests, type TestResponse } from "@/lib/api/tests"
 
 export function useTests(topic?: string, modelId?: string) {
   const [tests, setTests] = useState<TestResponse[]>([])
@@ -90,6 +90,33 @@ export function useTests(topic?: string, modelId?: string) {
     )
   }
 
+  const updateTestStatement = (testId: string, updates: { title?: string; ground_truth?: "acceptable" | "unacceptable" | "ungraded" }) => {
+    setTests(prevTests =>
+      prevTests.map(test =>
+        test.id === testId
+          ? { ...test, ...updates }
+          : test
+      )
+    )
+  }
+
+  const deleteTestsById = async (testIds: string[]) => {
+    try {
+      await deleteTests(testIds)
+      // Remove deleted tests from local state
+      setTests(prevTests =>
+        prevTests.filter(test => !testIds.includes(test.id))
+      )
+      return { success: true }
+    } catch (error) {
+      console.error("Error deleting tests:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to delete tests"
+      }
+    }
+  }
+
   // Debounced fetch when topic changes
   useEffect(() => {
     if (!topic) return
@@ -121,6 +148,8 @@ export function useTests(topic?: string, modelId?: string) {
     fetchTests,
     clearTests,
     updateTestAssessment,
+    updateTestStatement,
+    deleteTestsById,
   }
 }
 

@@ -1,4 +1,4 @@
-// src/components/data-table/table-cell-viewer.tsx
+// src/components/data-table/edit-statement-drawer.tsx
 import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from "@/components/ui/drawer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -7,26 +7,22 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { z } from "zod"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { schema } from "./schema"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { editTest } from "@/lib/api/tests"
 import { toast } from "sonner"
 
-interface TableCellViewerProps {
+interface EditStatementDrawerProps {
   item: z.infer<typeof schema>
   onUpdate?: (updatedItem: z.infer<typeof schema>) => void
+  children: React.ReactNode
 }
 
-export function TableCellViewer({ item, onUpdate }: TableCellViewerProps) {
+export function EditStatementDrawer({ item, onUpdate, children }: EditStatementDrawerProps) {
   const isMobile = useIsMobile()
+  const [isOpen, setIsOpen] = useState(false)
   const [editedStatement, setEditedStatement] = useState(item.statement)
   const [editedAssessment, setEditedAssessment] = useState(item.ground_truth)
   const [isLoading, setIsLoading] = useState(false)
-
-  // Reset form values when item changes
-  useEffect(() => {
-    setEditedStatement(item.statement)
-    setEditedAssessment(item.ground_truth)
-  }, [item.statement, item.ground_truth])
 
   const handleSave = async () => {
     if (!editedStatement.trim()) {
@@ -54,6 +50,7 @@ export function TableCellViewer({ item, onUpdate }: TableCellViewerProps) {
       }
       
       onUpdate?.(updatedItem)
+      setIsOpen(false)
       toast.success("Statement updated successfully" + (statementChanged ? " - AI re-grading in progress" : ""))
     } catch (error) {
       console.error("Error updating statement:", error)
@@ -63,10 +60,25 @@ export function TableCellViewer({ item, onUpdate }: TableCellViewerProps) {
     }
   }
 
+  const handleCancel = () => {
+    setEditedStatement(item.statement)
+    setEditedAssessment(item.ground_truth)
+    setIsOpen(false)
+  }
+
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open)
+    if (open) {
+      // Reset form when opening
+      setEditedStatement(item.statement)
+      setEditedAssessment(item.ground_truth)
+    }
+  }
+
   return (
-    <Drawer direction={isMobile ? "bottom" : "right"}>
+    <Drawer open={isOpen} onOpenChange={handleOpenChange} direction={isMobile ? "bottom" : "right"}>
       <DrawerTrigger asChild>
-        <Button variant="link" className="text-foreground w-fit px-0 text-left">{item.statement}</Button>
+        {children}
       </DrawerTrigger>
       <DrawerContent>
         <DrawerHeader className="gap-1">
@@ -110,11 +122,9 @@ export function TableCellViewer({ item, onUpdate }: TableCellViewerProps) {
             <Button onClick={handleSave} disabled={isLoading}>
               {isLoading ? "Saving..." : "Save Changes"}
             </Button>
-            <DrawerClose asChild>
-              <Button variant="outline" disabled={isLoading}>
-                Cancel
-              </Button>
-            </DrawerClose>
+            <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
+              Cancel
+            </Button>
           </div>
         </DrawerFooter>
       </DrawerContent>

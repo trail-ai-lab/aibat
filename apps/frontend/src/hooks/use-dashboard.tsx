@@ -18,7 +18,9 @@ export function useDashboard(selectedModel: string | undefined) {
     error,
     currentTopic,
     fetchTests,
-    updateTestAssessment
+    updateTestAssessment,
+    updateTestStatement,
+    deleteTestsById
   } = useTests(selectedTopic || undefined, selectedModel)
 
   const refreshTopics = useCallback(async () => {
@@ -129,5 +131,7 @@ export function useDashboard(selectedModel: string | undefined) {
     refreshTopics,
     refreshTests: () => selectedTopic && fetchTests(selectedTopic, true),
     updateTestAssessment,
+    updateTestStatement,
+    deleteTestsById,
   }
 }

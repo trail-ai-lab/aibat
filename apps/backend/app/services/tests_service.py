@@ -64,18 +64,52 @@ def auto_grade_tests(user_id: str, test_ids: list[str]):
 
 
 # Edit multiple tests (title, ground_truth)
-def edit_tests(user_id: str, test_updates: list[dict]):
+def edit_tests(user_id: str, test_updates: list):
     ref = db.collection("users").document(user_id).collection("tests")
     updated = 0
+    pipeline = None
+    
     for update in test_updates:
-        test_id = update["id"]
+        test_id = update.id
         new_data = {}
-        if "title" in update: new_data["title"] = update["title"]
-        if "ground_truth" in update: new_data["ground_truth"] = update["ground_truth"]
+        title_changed = False
+        
+        if update.title is not None:
+            new_data["title"] = update.title
+            title_changed = True
+        if update.ground_truth is not None:
+            new_data["ground_truth"] = update.ground_truth
+            
         if new_data:
             new_data["updated_at"] = datetime.utcnow()
+            
+            # If title changed, reset AI assessment and re-grade
+            if title_changed:
+                if pipeline is None:
+                    pipeline = get_model_pipeline(user_id)
+                
+                # Get the test document to get the topic
+                test_doc = ref.document(test_id).get()
+                if test_doc.exists:
+                    test_data = test_doc.to_dict()
+                    topic = test_data.get("topic")
+                    
+                    # Re-grade the updated statement
+                    new_label = pipeline.grade(update.title, topic)
+                    new_data["label"] = new_label
+                    new_data["validity"] = "approved" if new_label == new_data.get("ground_truth", test_data.get("ground_truth")) else "denied"
+                    
+                    # Cache the new assessment
+                    assessments = [{
+                        "test_id": test_id,
+                        "statement": update.title,
+                        "ai_assessment": new_label
+                    }]
+                    cache_multiple_assessments(user_id, topic, DEFAULT_MODEL_ID, assessments)
+            
             ref.document(test_id).update(new_data)
             updated += 1
+            
     return {"updated_count": updated}
 
 
