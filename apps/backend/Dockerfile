@@ -11,7 +11,7 @@ WORKDIR /app
 COPY pyproject.toml poetry.lock ./
 RUN pip install --no-cache-dir poetry \
   && poetry config virtualenvs.create false \
-  && poetry install --no-dev --no-root
+  && poetry install --only main --no-root
 
 # Copy code
 COPY . .
