@@ -44,7 +44,13 @@ export function ChartBarPerturbationValidity({
   topic,
 }: ChartProps) {
   const chartData = useMemo(() => {
-    const result: Array<{ type: string; approved: number; denied: number }> = []
+    const result: Array<{
+      type: string
+      category: "acceptable" | "unacceptable"
+      approved: number
+      denied: number
+    }> = []
+
     const perturbationsByType = new Map<string, PerturbationResponse[]>()
 
     data.forEach((test) => {
@@ -71,7 +77,8 @@ export function ChartBarPerturbationValidity({
 
         if (approved + denied > 0) {
           result.push({
-            type: `${type} - ${gt.charAt(0).toUpperCase() + gt.slice(1)}`,
+            type,
+            category: gt,
             approved,
             denied,
           })
@@ -130,9 +137,46 @@ export function ChartBarPerturbationValidity({
               tickLine={false}
               tickMargin={10}
               axisLine={false}
+              tickFormatter={(value) => String(value)}
+              interval={0}
             />
             <XAxis type="number" />
-            <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+            <ChartTooltip
+              cursor={false}
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null
+
+                const entry = payload[0].payload
+                const label =
+                  entry?.category === "acceptable"
+                    ? "Acceptable"
+                    : "Unacceptable"
+
+                return (
+                  <div className="rounded-md border bg-background px-3 py-2 shadow-sm text-sm min-w-[180px]">
+                    <div className="font-medium mb-2">{`${label} – ${entry?.type}`}</div>
+                    {payload.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between gap-2 mb-1"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="inline-block h-2 w-2 rounded-full"
+                            style={{ backgroundColor: item.color }}
+                          />
+                          <span className="text-muted-foreground">
+                            {item.name}
+                          </span>
+                        </div>
+                        <span>{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                )
+              }}
+            />
+
             <Bar
               dataKey="denied"
               stackId="a"

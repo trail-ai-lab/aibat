@@ -3,7 +3,7 @@
 from app.core.firebase_client import db
 from app.core.model_registry import MODEL_REGISTRY
 
-DEFAULT_MODEL = "groq-llama3"
+DEFAULT_MODEL = "groq-gemma2"
 
 
 def get_model_pipeline(uid: str):
