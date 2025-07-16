@@ -1,12 +1,15 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { fetchDefaultCriteria, type DefaultCriteriaItem } from "@/lib/api/criteria"
+import { fetchDefaultCriteria } from "@/lib/api/criteria"
+import { DefaultCriteriaItem } from "@/types/criteria"
 
 let cachedCriteriaConfigs: DefaultCriteriaItem[] | null = null
 
 export function useCriteria() {
-  const [criteriaConfigs, setCriteriaConfigs] = useState<DefaultCriteriaItem[]>([])
+  const [criteriaConfigs, setCriteriaConfigs] = useState<DefaultCriteriaItem[]>(
+    []
+  )
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {

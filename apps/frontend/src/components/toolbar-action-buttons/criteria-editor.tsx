@@ -36,12 +36,10 @@ export function CriteriaEditor({ onClose, currentTopic }: CriteriaEditorProps) {
       const config = criteriaConfigs.find((c) => c.config === appConfig)
       if (!config || !currentTopic) return
 
-      const defaultTypes: CriteriaType[] = config.types.map(
-        (t: CriteriaType) => ({
-          ...t,
-          isDefault: true,
-        })
-      )
+      const defaultTypes: CriteriaType[] = config.types.map((t) => ({
+        ...t,
+        isDefault: true,
+      }))
 
       try {
         const userTypes = await fetchUserCriteria(currentTopic)
@@ -76,12 +74,11 @@ export function CriteriaEditor({ onClose, currentTopic }: CriteriaEditorProps) {
   useEffect(() => {
     const config = criteriaConfigs.find((c) => c.config === appConfig)
     if (config) {
-      const defaultTypes: CriteriaType[] = config.types.map(
-        (t: CriteriaType) => ({
-          ...t,
-          isDefault: true,
-        })
-      )
+      const defaultTypes: CriteriaType[] = config.types.map((t) => ({
+        ...t,
+        isDefault: true,
+      }))
+
       setItems(defaultTypes)
       setSelectedItems(new Set(defaultTypes.map((t) => t.name)))
     }
