@@ -36,14 +36,15 @@ export function CriteriaEditor({ onClose, currentTopic }: CriteriaEditorProps) {
       const config = criteriaConfigs.find((c) => c.config === appConfig)
       if (!config || !currentTopic) return
 
-      const defaultTypes: CriteriaType[] = config.types.map((t: any) => ({
-        ...t,
-        isDefault: true,
-      }))
+      const defaultTypes: CriteriaType[] = config.types.map(
+        (t: CriteriaType) => ({
+          ...t,
+          isDefault: true,
+        })
+      )
 
       try {
         const userTypes = await fetchUserCriteria(currentTopic)
-        const userTypeNames = new Set(userTypes.map((t) => t.name))
 
         // Combine: include user types (with isDefault false) + ensure only saved ones are selected
         const combinedItems: CriteriaType[] = [
@@ -58,6 +59,7 @@ export function CriteriaEditor({ onClose, currentTopic }: CriteriaEditorProps) {
         setItems(combinedItems)
         setSelectedItems(selected)
       } catch (err) {
+        console.error(err)
         toast.error("Failed to load user criteria")
         // fallback to defaults if user config not found
         setItems(defaultTypes)
@@ -74,10 +76,12 @@ export function CriteriaEditor({ onClose, currentTopic }: CriteriaEditorProps) {
   useEffect(() => {
     const config = criteriaConfigs.find((c) => c.config === appConfig)
     if (config) {
-      const defaultTypes: CriteriaType[] = config.types.map((t: any) => ({
-        ...t,
-        isDefault: true,
-      }))
+      const defaultTypes: CriteriaType[] = config.types.map(
+        (t: CriteriaType) => ({
+          ...t,
+          isDefault: true,
+        })
+      )
       setItems(defaultTypes)
       setSelectedItems(new Set(defaultTypes.map((t) => t.name)))
     }

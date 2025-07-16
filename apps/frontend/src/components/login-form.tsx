@@ -28,7 +28,11 @@ export function LoginForm({
     setLoading(true)
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      )
       const token = await userCredential.user.getIdToken()
 
       localStorage.setItem("token", token)
@@ -37,9 +41,10 @@ export function LoginForm({
       await triggerOnboarding()
 
       router.push("/dashboard")
-    } catch (err: any) {
-      toast.error(err.message || "Login failed")
-      setError(err.message)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Login failed"
+      toast.error(message)
+      setError(message)
       setLoading(false)
     }
   }

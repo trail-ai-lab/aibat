@@ -25,7 +25,6 @@ export function GenerateStatementsButton({
   currentTopic,
   isOpen,
   onOpenChange,
-  onDataRefresh,
   onSuccess,
 }: GenerateStatementButtonProps) {
   const handleSuccess = () => {

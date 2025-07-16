@@ -1,6 +1,6 @@
 "use client"
 
-import { IconCirclePlusFilled, type Icon } from "@tabler/icons-react"
+import { IconCirclePlusFilled } from "@tabler/icons-react"
 
 import {
   SidebarGroup,
@@ -10,11 +10,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-export function NavMain({
-  onCreateTopic
-}: {
-  onCreateTopic?: () => void
-}) {
+export function NavMain({ onCreateTopic }: { onCreateTopic?: () => void }) {
   return (
     <SidebarGroup>
       <SidebarGroupContent className="flex flex-col gap-2">

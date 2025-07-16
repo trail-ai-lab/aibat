@@ -18,6 +18,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import { TestData } from "@/types/tests"
 
 export const description =
   "A stacked bar chart showing agreement by ground truth category"

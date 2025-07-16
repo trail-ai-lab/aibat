@@ -28,17 +28,21 @@ export function SignupForm({
     setLoading(true)
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      )
       const token = await userCredential.user.getIdToken()
       localStorage.setItem("token", token)
 
       await triggerOnboarding()
 
       router.push("/dashboard")
-    } catch (err: any) {
-      console.error("Signup error:", err)
-      toast.error(err.message || "Signup failed")
-      setError(err.message)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Sinup failed"
+      toast.error(message)
+      setError(message)
       setLoading(false)
     }
   }

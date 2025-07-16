@@ -1,5 +1,13 @@
 // src/components/data-table/edit-statement-drawer.tsx
-import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from "@/components/ui/drawer"
+import {
+  Drawer,
+  DrawerTrigger,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+} from "@/components/ui/drawer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -17,7 +25,11 @@ interface EditStatementDrawerProps {
   children: React.ReactNode
 }
 
-export function EditStatementDrawer({ item, onUpdate, children }: EditStatementDrawerProps) {
+export function EditStatementDrawer({
+  item,
+  onUpdate,
+  children,
+}: EditStatementDrawerProps) {
   const isMobile = useIsMobile()
   const [isOpen, setIsOpen] = useState(false)
   const [editedStatement, setEditedStatement] = useState(item.statement)
@@ -34,24 +46,29 @@ export function EditStatementDrawer({ item, onUpdate, children }: EditStatementD
     try {
       await editTest(item.id, {
         title: editedStatement,
-        ground_truth: editedAssessment
+        ground_truth: editedAssessment,
       })
-      
+
       // Check if statement text changed to trigger re-grading
       const statementChanged = editedStatement !== item.statement
-      
+
       // Update the item locally
       const updatedItem = {
         ...item,
         statement: editedStatement,
         ground_truth: editedAssessment,
         // If statement changed, set AI assessment to grading state
-        ai_assessment: statementChanged ? "grading" as const : item.ai_assessment
+        ai_assessment: statementChanged
+          ? ("grading" as const)
+          : item.ai_assessment,
       }
-      
+
       onUpdate?.(updatedItem)
       setIsOpen(false)
-      toast.success("Statement updated successfully" + (statementChanged ? " - AI re-grading in progress" : ""))
+      toast.success(
+        "Statement updated successfully" +
+          (statementChanged ? " - AI re-grading in progress" : "")
+      )
     } catch (error) {
       console.error("Error updating statement:", error)
       toast.error("Failed to update statement")
@@ -76,10 +93,12 @@ export function EditStatementDrawer({ item, onUpdate, children }: EditStatementD
   }
 
   return (
-    <Drawer open={isOpen} onOpenChange={handleOpenChange} direction={isMobile ? "bottom" : "right"}>
-      <DrawerTrigger asChild>
-        {children}
-      </DrawerTrigger>
+    <Drawer
+      open={isOpen}
+      onOpenChange={handleOpenChange}
+      direction={isMobile ? "bottom" : "right"}
+    >
+      <DrawerTrigger asChild>{children}</DrawerTrigger>
       <DrawerContent>
         <DrawerHeader className="gap-1">
           <DrawerTitle>Edit Statement</DrawerTitle>
@@ -103,7 +122,11 @@ export function EditStatementDrawer({ item, onUpdate, children }: EditStatementD
               <Label>Your Assessment</Label>
               <RadioGroup
                 value={editedAssessment}
-                onValueChange={(value) => setEditedAssessment(value as "acceptable" | "unacceptable" | "ungraded")}
+                onValueChange={(value) =>
+                  setEditedAssessment(
+                    value as "acceptable" | "unacceptable" | "ungraded"
+                  )
+                }
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="acceptable" id="acceptable" />
@@ -122,7 +145,11 @@ export function EditStatementDrawer({ item, onUpdate, children }: EditStatementD
             <Button onClick={handleSave} disabled={isLoading}>
               {isLoading ? "Saving..." : "Save Changes"}
             </Button>
-            <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+              disabled={isLoading}
+            >
               Cancel
             </Button>
           </div>

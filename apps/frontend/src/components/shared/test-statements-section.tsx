@@ -12,11 +12,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
-interface TestStatement {
-  test: string
-  ground_truth?: "acceptable" | "unacceptable"
-}
-
 interface TestStatementsSectionProps<T extends FieldValues> {
   control: Control<T>
   name: FieldPath<T>
@@ -81,10 +76,7 @@ export function TestStatementsSection<T extends FieldValues>({
                         onValueChange={field.onChange}
                       >
                         <div className="flex items-center space-x-2">
-                          <RadioGroupItem
-                            value="acceptable"
-                            id={`acc-${i}`}
-                          />
+                          <RadioGroupItem value="acceptable" id={`acc-${i}`} />
                           <FormLabel
                             htmlFor={`acc-${i}`}
                             className="cursor-pointer"

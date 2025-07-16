@@ -8,7 +8,6 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer"
-import { IconSettings } from "@tabler/icons-react"
 import { SettingsForm } from "@/components/sidebar-nav/settings-form"
 
 interface SettingsDrawerProps {

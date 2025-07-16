@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button"
 import {
   Form,
   FormDescription,
-  FormField,
   FormItem,
   FormLabel,
   FormMessage,
@@ -34,7 +33,7 @@ export function SettingsForm({
   onClose,
   onSuccess,
 }: SettingsFormProps) {
-  const { models, loading, selectedModel, handleModelSelect } = useModels()
+  const { models, selectedModel, handleModelSelect } = useModels()
 
   const form = useForm<z.infer<typeof settingsSchema>>({
     resolver: zodResolver(settingsSchema),

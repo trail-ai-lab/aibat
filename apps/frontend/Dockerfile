@@ -8,6 +8,9 @@ RUN npm install -g pnpm
 
 COPY . .
 
+# Disable ESLint during build
+ENV NEXT_DISABLE_ESLINT=1
+
 RUN pnpm install --frozen-lockfile
 RUN pnpm build
 

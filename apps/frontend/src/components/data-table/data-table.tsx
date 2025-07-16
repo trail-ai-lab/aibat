@@ -10,7 +10,6 @@ import {
   getSortedRowModel,
   getFacetedRowModel,
   getFacetedUniqueValues,
-  flexRender,
   type VisibilityState,
   type ColumnFiltersState,
   type SortingState,
