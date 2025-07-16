@@ -27,6 +27,12 @@ export function LoginForm({
     setError("")
     setLoading(true)
 
+    if (!auth) {
+      setError("Authentication service is not available")
+      setLoading(false)
+      return
+    }
+
     try {
       const userCredential = await signInWithEmailAndPassword(
         auth,

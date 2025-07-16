@@ -27,6 +27,12 @@ export function SignupForm({
     setError("")
     setLoading(true)
 
+    if (!auth) {
+      setError("Authentication service is not available")
+      setLoading(false)
+      return
+    }
+
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
@@ -40,7 +46,7 @@ export function SignupForm({
 
       router.push("/dashboard")
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Sinup failed"
+      const message = err instanceof Error ? err.message : "Signup failed"
       toast.error(message)
       setError(message)
       setLoading(false)
