@@ -1,14 +1,89 @@
 # app/pipelines/groq_pipeline.py
 
 import os
+import re
+import time
+import json
 import requests
-from typing import Optional
+from typing import Optional, Union
+
+class GroqRateLimiter:
+    """Global rate limiter for Groq API - 30 RPM = 1 call every 2 seconds"""
+    _last_call_time = 0
+    _min_interval = 2.0  # 2 seconds between calls for 30 RPM
+    
+    @classmethod
+    def wait_if_needed(cls):
+        """Wait if necessary to respect rate limits"""
+        current_time = time.time()
+        time_since_last = current_time - cls._last_call_time
+        
+        if time_since_last < cls._min_interval:
+            sleep_time = cls._min_interval - time_since_last
+            print(f"Rate limiter: waiting {sleep_time:.2f}s before next API call")
+            time.sleep(sleep_time)
+        
+        cls._last_call_time = time.time()
 
 class GroqPipeline:
     def __init__(self, model: str):
         self.api_key = os.getenv("GROQ_API_KEY")
         self.base_url = "https://api.groq.com/openai/v1/chat/completions"
         self.model = model
+        self.rate_limiter = GroqRateLimiter()
+    
+    def _parse_retry_after(self, error_response: dict) -> float:
+        """Parse retry-after time from Groq error response"""
+        try:
+            error_message = error_response.get("error", {}).get("message", "")
+            # Look for "Please try again in XXXms" pattern
+            match = re.search(r"try again in (\d+(?:\.\d+)?)ms", error_message)
+            if match:
+                return float(match.group(1)) / 1000.0  # Convert ms to seconds
+        except Exception:
+            pass
+        return 2.0  # Default fallback
+    
+    def _make_api_call(self, payload: dict, operation: str) -> Union[dict, None]:
+        """Make API call with proper rate limiting and retry logic"""
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        # Apply global rate limiting
+        self.rate_limiter.wait_if_needed()
+        
+        try:
+            print(f"Making Groq API call for {operation}")
+            response = requests.post(self.base_url, headers=headers, json=payload)
+            
+            if response.status_code == 429:
+                # Parse the retry-after time from the error response
+                try:
+                    error_data = response.json()
+                    retry_after = self._parse_retry_after(error_data)
+                    print(f"Rate limit hit, retrying after {retry_after}s")
+                    time.sleep(retry_after)
+                    
+                    # Retry once
+                    response = requests.post(self.base_url, headers=headers, json=payload)
+                except Exception as e:
+                    print(f"Error parsing rate limit response: {e}")
+                    return None
+            
+            response.raise_for_status()
+            return response.json()
+            
+        except requests.exceptions.RequestException as e:
+            print(f"Error calling Groq API for {operation}: {e}")
+            if hasattr(e, 'response') and e.response is not None:
+                print(f"Response status: {e.response.status_code}")
+                print(f"Response text: {e.response.text}")
+            return None
+        except Exception as e:
+            print(f"Unexpected error in API call for {operation}: {e}")
+            return None
         
     def grade(self, statement: str, topic_prompt: Optional[str] = None) -> str:
         if not self.api_key:
@@ -27,11 +102,6 @@ class GroqPipeline:
             }
         ]
 
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
-
         payload = {
             "model": self.model,
             "messages": messages,
@@ -40,31 +110,34 @@ class GroqPipeline:
             "top_p": 0.9,
         }
 
+        result = self._make_api_call(payload, f"grading: {statement[:50]}...")
+        
+        if result is None:
+            print(f"API call failed for grading: {statement[:50]}...")
+            return "unknown"
+        
         try:
-            response = requests.post(self.base_url, headers=headers, json=payload)
-            response.raise_for_status()
-            result = response.json()
             prediction = result["choices"][0]["message"]["content"].strip().lower()
 
             # Handle known outputs explicitly
             if prediction == "acceptable":
+                print(f"Graded as acceptable: {statement[:50]}...")
                 return "acceptable"
             elif prediction == "unacceptable":
+                print(f"Graded as unacceptable: {statement[:50]}...")
                 return "unacceptable"
             else:
-                print(f"Unexpected model response: '{prediction}'")
+                print(f"Unexpected model response: '{prediction}' for statement: {statement[:50]}...")
                 return "unknown"
-        except requests.exceptions.RequestException as e:
-            print(f"Error calling Groq API: {e}")
-            return "unknown"
         except (KeyError, IndexError) as e:
-            print(f"Error parsing Groq API response: {e}")
+            print(f"Error parsing Groq API response for grading: {e}")
             return "unknown"
 
 
-    def custom_perturb(self, prompt: str) -> str:
+    def custom_perturb(self, prompt: str) -> Union[str, None]:
         """
         Generate a perturbed version of text based on the given prompt
+        Returns None if perturbation fails
         """
         if not self.api_key:
             raise ValueError("GROQ_API_KEY not found in environment variables")
@@ -80,11 +153,6 @@ class GroqPipeline:
             }
         ]
 
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
-
         payload = {
             "model": self.model,
             "messages": messages,
@@ -93,18 +161,29 @@ class GroqPipeline:
             "top_p": 0.9,
         }
 
+        # Extract original text for comparison
+        original_text = prompt.split(": ", 1)[-1] if ": " in prompt else prompt
+
+        result = self._make_api_call(payload, f"perturbation: {prompt[:100]}...")
+        
+        if result is None:
+            print(f"API call failed for perturbation: {prompt[:100]}...")
+            return None
+        
         try:
-            response = requests.post(self.base_url, headers=headers, json=payload)
-            response.raise_for_status()
-            result = response.json()
             perturbed_text = result["choices"][0]["message"]["content"].strip()
+            
+            # Check if the perturbation actually changed the text
+            if perturbed_text == original_text:
+                print(f"Warning: Perturbation returned same text as original: {original_text}")
+            else:
+                print(f"Successfully perturbed: '{original_text}' -> '{perturbed_text}'")
+            
             return perturbed_text
-        except requests.exceptions.RequestException as e:
-            print(f"Error calling Groq API for perturbation: {e}")
-            return prompt.split(": ", 1)[-1] if ": " in prompt else prompt  # Return original text as fallback
+            
         except (KeyError, IndexError) as e:
             print(f"Error parsing Groq API response for perturbation: {e}")
-            return prompt.split(": ", 1)[-1] if ": " in prompt else prompt  # Return original text as fallback
+            return None
     
     def generate(self, existing_statements: list, topic_prompt: str, criteria: str = "base", num_statements: int = 5) -> list:
         """

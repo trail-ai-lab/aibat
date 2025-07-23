@@ -3,7 +3,7 @@
 import os
 import json
 import tempfile
-from typing import Optional
+from typing import Optional, Union
 from google.cloud import aiplatform
 from vertexai.generative_models import GenerativeModel
 import vertexai
@@ -97,5 +97,36 @@ class GCPPipeline:
             print(f"Error calling Vertex AI API: {e}")
             return "unknown"
 
-    def custom_perturb(self, prompt: str) -> str:
-        return f"{self.model_name}: {prompt}"
+    def custom_perturb(self, prompt: str) -> Union[str, None]:
+        """
+        Generate a perturbed version of text based on the given prompt
+        """
+        # Check if credentials are properly set up
+        if not self.credentials_set or not self.model:
+            print("GCP credentials not properly configured, returning None")
+            return None
+            
+        try:
+            # System message to ensure the model applies the transformation correctly
+            system_message = "You are a text perturbation assistant. Apply the requested transformation to the given text. Only return the transformed text without any explanations or additional commentary."
+            
+            # Combine system message with user prompt
+            full_prompt = f"{system_message}\n\n{prompt}"
+            
+            # Generate response
+            response = self.model.generate_content(
+                full_prompt,
+                generation_config={
+                    "max_output_tokens": 150,
+                    "temperature": 0.7,
+                    "top_p": 0.9,
+                }
+            )
+            
+            # Extract and return the perturbed text
+            perturbed_text = response.text.strip()
+            return perturbed_text
+            
+        except Exception as e:
+            print(f"Error calling Vertex AI API for perturbation: {e}")
+            return None
