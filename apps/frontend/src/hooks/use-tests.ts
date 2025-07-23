@@ -1,9 +1,14 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { fetchTestsByTopic, autoGradeTests, deleteTests, type TestResponse } from "@/lib/api/tests"
+import {
+  fetchTestsByTopic,
+  autoGradeTests,
+  deleteTests,
+  type TestResponse,
+} from "@/lib/api/tests"
 
-export function useTests(topic?: string, modelId?: string) {
+export function useTests(topic?: string) {
   const [tests, setTests] = useState<TestResponse[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -13,7 +18,10 @@ export function useTests(topic?: string, modelId?: string) {
   const lastFetchRef = useRef<string | null>(null)
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const fetchTests = async (topicName: string, forceRefresh: boolean = false) => {
+  const fetchTests = async (
+    topicName: string,
+    forceRefresh: boolean = false
+  ) => {
     if (!topicName) return
 
     if (lastFetchRef.current === topicName && !forceRefresh) return
@@ -28,35 +36,41 @@ export function useTests(topic?: string, modelId?: string) {
     try {
       const response = await fetchTestsByTopic(topicName)
       console.log(`✅ API call successful for topic: ${topicName}`)
-      
+
       // Set tests and stop loading immediately to show the table
       setTests(response.tests)
       setCurrentTopic(topicName)
       setLoading(false) // Stop loading here so table shows immediately
-      
+
       // Auto grade ungraded tests in the background
-      const ungradedTests = response.tests.filter(test => test.label === "ungraded")
+      const ungradedTests = response.tests.filter(
+        (test) => test.label === "ungraded"
+      )
       if (ungradedTests.length > 0) {
-        console.log(`🤖 Auto grading ${ungradedTests.length} ungraded tests in background...`)
-        
+        console.log(
+          `🤖 Auto grading ${ungradedTests.length} ungraded tests in background...`
+        )
+
         // Update the tests to show "grading" state immediately
-        const testsWithGradingState = response.tests.map(test =>
-          ungradedTests.some(ungraded => ungraded.id === test.id)
+        const testsWithGradingState = response.tests.map((test) =>
+          ungradedTests.some((ungraded) => ungraded.id === test.id)
             ? { ...test, label: "grading" as const }
             : test
         )
         setTests(testsWithGradingState)
-        
+
         // Do auto grading in background without affecting loading state
         setTimeout(async () => {
           try {
-            const ungradedTestIds = ungradedTests.map(test => test.id)
+            const ungradedTestIds = ungradedTests.map((test) => test.id)
             await autoGradeTests(ungradedTestIds)
-            
+
             // Refresh tests to get the updated grades
             const updatedResponse = await fetchTestsByTopic(topicName)
             setTests(updatedResponse.tests)
-            console.log(`✅ Auto grading completed for ${ungradedTests.length} tests`)
+            console.log(
+              `✅ Auto grading completed for ${ungradedTests.length} tests`
+            )
           } catch (gradingError) {
             console.error("❌ Error during auto grading:", gradingError)
             // Revert grading state on error
@@ -80,22 +94,27 @@ export function useTests(topic?: string, modelId?: string) {
     setError(null)
   }
 
-  const updateTestAssessment = (testId: string, assessment: "acceptable" | "unacceptable") => {
-    setTests(prevTests =>
-      prevTests.map(test =>
-        test.id === testId
-          ? { ...test, ground_truth: assessment }
-          : test
+  const updateTestAssessment = (
+    testId: string,
+    assessment: "acceptable" | "unacceptable"
+  ) => {
+    setTests((prevTests) =>
+      prevTests.map((test) =>
+        test.id === testId ? { ...test, ground_truth: assessment } : test
       )
     )
   }
 
-  const updateTestStatement = (testId: string, updates: { title?: string; ground_truth?: "acceptable" | "unacceptable" | "ungraded" }) => {
-    setTests(prevTests =>
-      prevTests.map(test =>
-        test.id === testId
-          ? { ...test, ...updates }
-          : test
+  const updateTestStatement = (
+    testId: string,
+    updates: {
+      title?: string
+      ground_truth?: "acceptable" | "unacceptable" | "ungraded"
+    }
+  ) => {
+    setTests((prevTests) =>
+      prevTests.map((test) =>
+        test.id === testId ? { ...test, ...updates } : test
       )
     )
   }
@@ -104,15 +123,16 @@ export function useTests(topic?: string, modelId?: string) {
     try {
       await deleteTests(testIds)
       // Remove deleted tests from local state
-      setTests(prevTests =>
-        prevTests.filter(test => !testIds.includes(test.id))
+      setTests((prevTests) =>
+        prevTests.filter((test) => !testIds.includes(test.id))
       )
       return { success: true }
     } catch (error) {
       console.error("Error deleting tests:", error)
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to delete tests"
+        error:
+          error instanceof Error ? error.message : "Failed to delete tests",
       }
     }
   }

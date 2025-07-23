@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { signInWithEmailAndPassword } from "firebase/auth"
-import { auth } from "@/lib/firebase"
+import { auth } from "@/lib/firebase.client"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -27,8 +27,18 @@ export function LoginForm({
     setError("")
     setLoading(true)
 
+    if (!auth) {
+      setError("Authentication service is not available")
+      setLoading(false)
+      return
+    }
+
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      )
       const token = await userCredential.user.getIdToken()
 
       localStorage.setItem("token", token)
@@ -37,9 +47,10 @@ export function LoginForm({
       await triggerOnboarding()
 
       router.push("/dashboard")
-    } catch (err: any) {
-      toast.error(err.message || "Login failed")
-      setError(err.message)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Login failed"
+      toast.error(message)
+      setError(message)
       setLoading(false)
     }
   }

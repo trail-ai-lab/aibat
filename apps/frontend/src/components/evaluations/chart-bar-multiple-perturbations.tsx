@@ -16,10 +16,10 @@ import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
-  ChartTooltipContent,
 } from "@/components/ui/chart"
 
 import { PerturbationResponse } from "@/types/perturbations"
+import { TestData } from "@/types/tests"
 
 interface ChartProps {
   data: TestData[]

@@ -18,6 +18,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import { TestData } from "@/types/tests"
 
 export const description =
   "A pie chart showing agreement between AI and human assessments"

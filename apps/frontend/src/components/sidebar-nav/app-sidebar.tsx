@@ -4,12 +4,7 @@
 
 import * as React from "react"
 import { useState } from "react"
-import {
-  IconSettings,
-  IconHelp,
-  IconSearch,
-  IconInnerShadowTop,
-} from "@tabler/icons-react"
+import { IconSettings, IconHelp, IconInnerShadowTop } from "@tabler/icons-react"
 
 import { NavTopics } from "@/components/sidebar-nav/nav-topics"
 import { NavMain } from "@/components/sidebar-nav/nav-main"
@@ -26,6 +21,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { Topic } from "@/types/topics"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export function AppSidebar({
   onTopicSelect,
@@ -40,10 +36,14 @@ export function AppSidebar({
   onTopicSelect?: (topic: string) => void
   onCreateTopic?: () => void
   onDeleteTopic?: (topic: string) => void
-  onEditTopic?: (oldName: string, newName: string, prompt: string) => Promise<void>
+  onEditTopic?: (
+    oldName: string,
+    newName: string,
+    prompt: string
+  ) => Promise<void>
   selectedTopic?: string | null
   topics: Topic[]
-  loading: boolean
+  loading?: boolean
 }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
@@ -79,15 +79,26 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <NavMain onCreateTopic={onCreateTopic} />
-        <NavTopics
-          topics={topics}
-          onTopicSelect={onTopicSelect}
-          selectedTopic={selectedTopic}
-          onDeleteTopic={onDeleteTopic}
-          onEditTopic={onEditTopic}
-        />
+
+        {loading ? (
+          <div className="flex flex-col gap-2 p-4">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-8 w-full rounded-md" />
+            ))}
+          </div>
+        ) : (
+          <NavTopics
+            topics={topics}
+            onTopicSelect={onTopicSelect}
+            selectedTopic={selectedTopic}
+            onDeleteTopic={onDeleteTopic}
+            onEditTopic={onEditTopic}
+          />
+        )}
+
         <NavSecondary items={navSecondary} className="mt-auto" />
       </SidebarContent>
+
       <SidebarFooter>
         <NavUser />
       </SidebarFooter>

@@ -9,7 +9,7 @@ export interface TopicResponse {
 export interface Topic {
   name: string
   url: string
-  icon?: any
+  icon?: React.ComponentType
   isBuiltin: boolean
   prompt: string
   createdAt?: string | null

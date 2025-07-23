@@ -1,5 +1,5 @@
 // components/dashboard/dashboard-table.tsx
-import { IconLoader, IconDatabase } from "@tabler/icons-react"
+import { IconDatabase } from "@tabler/icons-react"
 import { DataTable } from "@/components/data-table/data-table"
 import { PerturbationResponse } from "@/types/perturbations"
 import { z } from "zod"
@@ -11,10 +11,15 @@ interface Props {
   loading: boolean
   error: string | null
   data: z.infer<typeof schema>[]
-  onAssessmentChange: (testId: string, value: "acceptable" | "unacceptable") => void
+  onAssessmentChange: (
+    testId: string,
+    value: "acceptable" | "unacceptable"
+  ) => void
   onDataRefresh: () => void
   cachedPerturbations: Map<string, PerturbationResponse[]>
-  onPerturbationsUpdate: (newPerturbations: Map<string, PerturbationResponse[]>) => void
+  onPerturbationsUpdate: (
+    newPerturbations: Map<string, PerturbationResponse[]>
+  ) => void
   onStatementUpdate?: (updatedItem: z.infer<typeof schema>) => void
   onDeleteTest?: (testId: string) => void
   onBulkDeleteTests?: (testIds: string[]) => Promise<void>
@@ -31,20 +36,20 @@ export function DashboardTable({
   onPerturbationsUpdate,
   onStatementUpdate,
   onDeleteTest,
-  onBulkDeleteTests
+  onBulkDeleteTests,
 }: Props) {
   if (loading) {
     return (
       <div className="space-y-4 py-4">
-      {[...Array(5)].map((_, i) => (
-        <div key={i} className="flex items-center gap-4 px-4">
-          <Skeleton className="h-4 w-4 rounded" />
-          <Skeleton className="h-4 w-[40%]" />
-          <Skeleton className="h-4 w-[20%]" />
-          <Skeleton className="h-4 w-[15%]" />
-        </div>
-      ))}
-    </div>
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="flex items-center gap-4 px-4">
+            <Skeleton className="h-4 w-4 rounded" />
+            <Skeleton className="h-4 w-[40%]" />
+            <Skeleton className="h-4 w-[20%]" />
+            <Skeleton className="h-4 w-[15%]" />
+          </div>
+        ))}
+      </div>
     )
   }
 
@@ -66,7 +71,7 @@ export function DashboardTable({
           <IconDatabase className="size-12 mx-auto mb-4 text-muted-foreground" />
           <p className="text-lg font-medium mb-2">No tests found</p>
           <p className="text-sm text-muted-foreground">
-            No test statements available for topic "{topic}"
+            No test statements available for topic {topic}
           </p>
         </div>
       </div>

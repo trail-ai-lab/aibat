@@ -14,7 +14,6 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer"
-import { useModels } from "@/hooks/use-models"
 import { usePerturbations } from "@/hooks/use-perturbations"
 import { updateTestAssessment } from "@/lib/api/tests"
 import { toast } from "sonner"
@@ -27,7 +26,6 @@ import { z } from "zod"
 import { schema } from "@/components/data-table/schema"
 
 export default function Page() {
-  const { selectedModel } = useModels()
   const [isCreateTopicOpen, setIsCreateTopicOpen] = useState(false)
 
   const {
@@ -47,32 +45,44 @@ export default function Page() {
     updateTestAssessment: updateLocalTestAssessment,
     updateTestStatement,
     deleteTestsById,
-  } = useDashboard(selectedModel)
+  } = useDashboard()
 
-  const { perturbations, addPerturbations } = usePerturbations(currentTopic || undefined)
+  const { perturbations, addPerturbations } = usePerturbations(
+    currentTopic || undefined
+  )
 
   const tableData = useMemo(
-  () =>
-    tests
-      .map(test => {
+    () =>
+      tests.map((test) => {
         // Calculate agreement based on AI assessment vs user assessment
-        const aiAssessment = test.label === "acceptable" ? "acceptable" :
-                           test.label === "unacceptable" ? "unacceptable" : null;
-        const userAssessment = test.ground_truth;
-        
-        let agreement = null;
+        const aiAssessment =
+          test.label === "acceptable"
+            ? "acceptable"
+            : test.label === "unacceptable"
+            ? "unacceptable"
+            : null
+        const userAssessment = test.ground_truth
+
+        let agreement = null
         if (aiAssessment && userAssessment !== "ungraded") {
-          agreement = aiAssessment === userAssessment;
+          agreement = aiAssessment === userAssessment
         }
-        
+
         return {
           id: test.id,
           statement: test.title,
-          ground_truth: test.ground_truth as "acceptable" | "unacceptable" | "ungraded",
-          ai_assessment: test.label === "acceptable" ? "pass" as const :
-                         test.label === "unacceptable" ? "fail" as const :
-                         test.label === "ungraded" ? "grading" as const :
-                         "grading" as const,
+          ground_truth: test.ground_truth as
+            | "acceptable"
+            | "unacceptable"
+            | "ungraded",
+          ai_assessment:
+            test.label === "acceptable"
+              ? ("pass" as const)
+              : test.label === "unacceptable"
+              ? ("fail" as const)
+              : test.label === "ungraded"
+              ? ("grading" as const)
+              : ("grading" as const),
           agreement,
           topic: test.topic,
           labeler: "ai_generated",
@@ -82,19 +92,22 @@ export default function Page() {
           is_builtin: false,
           parent_id: undefined,
           criteria_text: undefined,
-          perturbation_type: undefined
+          perturbation_type: undefined,
         }
       }),
-  [tests]
-)
+    [tests]
+  )
 
-  const handleAssessmentChange = async (testId: string, assessment: "acceptable" | "unacceptable") => {
+  const handleAssessmentChange = async (
+    testId: string,
+    assessment: "acceptable" | "unacceptable"
+  ) => {
     try {
       await updateTestAssessment(testId, assessment)
-      
+
       // Update local state immediately to reflect the change in the specific cell
       updateLocalTestAssessment(testId, assessment)
-      
+
       toast.success(`Assessment updated to ${assessment}`)
     } catch (error) {
       console.error("Error updating assessment:", error)
@@ -106,9 +119,9 @@ export default function Page() {
     // Update the underlying test data
     updateTestStatement(updatedItem.id, {
       title: updatedItem.statement,
-      ground_truth: updatedItem.ground_truth
+      ground_truth: updatedItem.ground_truth,
     })
-    
+
     // If AI assessment is in grading state, refresh data after a delay to get updated assessment
     if (updatedItem.ai_assessment === "grading") {
       setTimeout(() => {
@@ -135,7 +148,11 @@ export default function Page() {
     try {
       const result = await deleteTestsById(testIds)
       if (result.success) {
-        toast.success(`${testIds.length} test${testIds.length === 1 ? '' : 's'} deleted successfully`)
+        toast.success(
+          `${testIds.length} test${
+            testIds.length === 1 ? "" : "s"
+          } deleted successfully`
+        )
       } else {
         toast.error(result.error || "Failed to delete tests")
       }
@@ -147,10 +164,12 @@ export default function Page() {
 
   return (
     <SidebarProvider
-      style={{
-        "--sidebar-width": "calc(var(--spacing) * 72)",
-        "--header-height": "calc(var(--spacing) * 12)",
-      } as React.CSSProperties}
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 72)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        } as React.CSSProperties
+      }
     >
       <AppSidebar
         variant="inset"
@@ -163,12 +182,13 @@ export default function Page() {
         onEditTopic={handleTopicEdit}
       />
       <SidebarInset>
-        <SiteHeader topicName={currentTopic ?? undefined} testsCount={tests.length} />
+        <SiteHeader
+          topicName={currentTopic ?? undefined}
+          testsCount={tests.length}
+        />
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              
-
               <DashboardTable
                 topic={currentTopic}
                 loading={loading}
@@ -196,14 +216,16 @@ export default function Page() {
 
       <Drawer open={isCreateTopicOpen} onOpenChange={setIsCreateTopicOpen}>
         <DrawerContent>
-            <DrawerHeader>
-              <DrawerTitle>Create New Topic</DrawerTitle>
-              <DrawerDescription>Create new topic for assessment.</DrawerDescription>
-            </DrawerHeader>
-            <AddTopicForm
-              onClose={() => setIsCreateTopicOpen(false)}
-              onSuccess={handleTopicCreated}
-            />
+          <DrawerHeader>
+            <DrawerTitle>Create New Topic</DrawerTitle>
+            <DrawerDescription>
+              Create new topic for assessment.
+            </DrawerDescription>
+          </DrawerHeader>
+          <AddTopicForm
+            onClose={() => setIsCreateTopicOpen(false)}
+            onSuccess={handleTopicCreated}
+          />
         </DrawerContent>
       </Drawer>
     </SidebarProvider>

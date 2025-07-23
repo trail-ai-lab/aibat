@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createUserWithEmailAndPassword } from "firebase/auth"
-import { auth } from "@/lib/firebase"
+import { auth } from "@/lib/firebase.client"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -27,18 +27,28 @@ export function SignupForm({
     setError("")
     setLoading(true)
 
+    if (!auth) {
+      setError("Authentication service is not available")
+      setLoading(false)
+      return
+    }
+
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      )
       const token = await userCredential.user.getIdToken()
       localStorage.setItem("token", token)
 
       await triggerOnboarding()
 
       router.push("/dashboard")
-    } catch (err: any) {
-      console.error("Signup error:", err)
-      toast.error(err.message || "Signup failed")
-      setError(err.message)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Signup failed"
+      toast.error(message)
+      setError(message)
       setLoading(false)
     }
   }

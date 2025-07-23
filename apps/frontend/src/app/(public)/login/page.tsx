@@ -1,3 +1,6 @@
+"use client"
+export const dynamic = "force-dynamic"
+
 import { GalleryVerticalEnd } from "lucide-react"
 
 import { LoginForm } from "@/components/login-form"

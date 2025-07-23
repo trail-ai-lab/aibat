@@ -1,4 +1,4 @@
-interface TestData {
+export interface TestData {
   id: string
   statement: string
   ground_truth: "acceptable" | "unacceptable" | "ungraded"

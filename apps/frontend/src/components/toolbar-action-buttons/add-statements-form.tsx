@@ -10,15 +10,7 @@ import {
   type AddStatementsRequest,
 } from "@/lib/api/tests"
 import { Button } from "@/components/ui/button"
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
+import { Form } from "@/components/ui/form"
 import { IconLoader } from "@tabler/icons-react"
 import { TestStatementsSection } from "@/components/shared/test-statements-section"
 

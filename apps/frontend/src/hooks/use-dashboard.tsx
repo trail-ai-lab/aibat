@@ -5,7 +5,7 @@ import { useTests } from "./use-tests"
 import { fetchTopics, deleteTopic as deleteTopicAPI, editTopic as editTopicAPI } from "@/lib/api/topics"
 import { Topic, TopicResponse } from "@/types/topics"
 
-export function useDashboard(selectedModel: string | undefined) {
+export function useDashboard() {
   const [topics, setTopics] = useState<Topic[]>([])
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null)
   const [topicPrompt, setTopicPrompt] = useState<string | null>(null)
@@ -21,7 +21,7 @@ export function useDashboard(selectedModel: string | undefined) {
     updateTestAssessment,
     updateTestStatement,
     deleteTestsById
-  } = useTests(selectedTopic || undefined, selectedModel)
+  } = useTests(selectedTopic || undefined)
 
   const refreshTopics = useCallback(async () => {
     try {
