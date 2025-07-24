@@ -64,20 +64,6 @@ export function DashboardTable({
     )
   }
 
-  if (data.length === 0 && topic) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <IconDatabase className="size-12 mx-auto mb-4 text-muted-foreground" />
-          <p className="text-lg font-medium mb-2">No tests found</p>
-          <p className="text-sm text-muted-foreground">
-            No test statements available for topic {topic}
-          </p>
-        </div>
-      </div>
-    )
-  }
-
   if (!topic) return null
 
   return (
