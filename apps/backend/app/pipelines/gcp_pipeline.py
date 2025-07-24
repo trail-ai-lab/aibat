@@ -130,3 +130,144 @@ class GCPPipeline:
         except Exception as e:
             print(f"Error calling Vertex AI API for perturbation: {e}")
             return None
+
+    def batch_perturb(self, prompts: list) -> list:
+        """
+        Generate multiple perturbations in a single API call for better efficiency
+        Returns list of perturbed texts (or None for failures) in the same order as input prompts
+        """
+        if not self.credentials_set or not self.model:
+            print("GCP credentials not properly configured for batch perturbation")
+            return [None] * len(prompts)
+        
+        if not prompts:
+            return []
+        
+        try:
+            # Create a single prompt that processes all perturbations
+            batch_prompt = "Process the following perturbation requests. For each numbered request, apply the specified transformation and return only the transformed text on a new line. Format your response as:\n1. [transformed text 1]\n2. [transformed text 2]\n...\n\nRequests:\n"
+            
+            for i, prompt in enumerate(prompts, 1):
+                batch_prompt += f"{i}. {prompt}\n"
+
+            # System message
+            system_message = "You are a text perturbation assistant. Process multiple perturbation requests and return only the transformed texts, numbered as requested. Do not provide explanations."
+            
+            # Combine system message with user prompt
+            full_prompt = f"{system_message}\n\n{batch_prompt}"
+            
+            # Generate response
+            response = self.model.generate_content(
+                full_prompt,
+                generation_config={
+                    "max_output_tokens": min(4000, len(prompts) * 50),
+                    "temperature": 0.7,
+                    "top_p": 0.9,
+                }
+            )
+            
+            response_text = response.text.strip()
+            
+            # Parse the numbered responses
+            perturbed_texts = []
+            lines = response_text.split('\n')
+            
+            # Create a mapping of line numbers to responses
+            response_map = {}
+            for line in lines:
+                line = line.strip()
+                if line and line[0].isdigit():
+                    # Extract number and text
+                    parts = line.split('.', 1)
+                    if len(parts) == 2:
+                        try:
+                            num = int(parts[0].strip())
+                            text = parts[1].strip()
+                            response_map[num] = text
+                        except ValueError:
+                            continue
+            
+            # Build results in the correct order
+            for i in range(1, len(prompts) + 1):
+                if i in response_map:
+                    perturbed_texts.append(response_map[i])
+                else:
+                    print(f"Missing response for batch perturbation {i}")
+                    perturbed_texts.append(None)
+            
+            return perturbed_texts
+            
+        except Exception as e:
+            print(f"Error in GCP batch perturbation: {e}")
+            return [None] * len(prompts)
+
+    def batch_grade(self, statements: list, topic: str) -> list:
+        """
+        Grade multiple statements in a single API call for better efficiency
+        Returns list of grades ("acceptable"/"unacceptable"/"unknown") in the same order as input
+        """
+        if not self.credentials_set or not self.model:
+            print("GCP credentials not properly configured for batch grading")
+            return ["unknown"] * len(statements)
+        
+        if not statements:
+            return []
+        
+        try:
+            # Create a single prompt that processes all gradings
+            batch_prompt = f"Grade the following statements as 'acceptable' or 'unacceptable' for the topic: {topic}\n\nFormat your response as:\n1. acceptable/unacceptable\n2. acceptable/unacceptable\n...\n\nStatements to grade:\n"
+            
+            for i, statement in enumerate(statements, 1):
+                batch_prompt += f"{i}. {statement}\n"
+
+            # System message
+            system_message = "Grade each statement as 'acceptable' or 'unacceptable'. Return only the grades in numbered format. Do not provide explanations."
+            
+            # Combine system message with user prompt
+            full_prompt = f"{system_message}\n\n{batch_prompt}"
+            
+            # Generate response
+            response = self.model.generate_content(
+                full_prompt,
+                generation_config={
+                    "max_output_tokens": min(1000, len(statements) * 10),
+                    "temperature": 0.6,
+                    "top_p": 0.9,
+                }
+            )
+            
+            response_text = response.text.strip()
+            
+            # Parse the numbered responses
+            grades = []
+            lines = response_text.split('\n')
+            
+            # Create a mapping of line numbers to grades
+            grade_map = {}
+            for line in lines:
+                line = line.strip()
+                if line and line[0].isdigit():
+                    # Extract number and grade
+                    parts = line.split('.', 1)
+                    if len(parts) == 2:
+                        try:
+                            num = int(parts[0].strip())
+                            grade = parts[1].strip().lower()
+                            if grade in ["acceptable", "unacceptable"]:
+                                grade_map[num] = grade
+                        except ValueError:
+                            continue
+            
+            # Build results in the correct order
+            for i in range(1, len(statements) + 1):
+                if i in grade_map:
+                    grades.append(grade_map[i])
+                else:
+                    print(f"Missing or invalid grade for statement {i}")
+                    grades.append("unknown")
+            
+            return grades
+            
+        except Exception as e:
+            print(f"Error in GCP batch grading: {e}")
+            return ["unknown"] * len(statements)

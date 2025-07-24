@@ -20,7 +20,7 @@ def log_action(user_id: str, action: str, data: dict):
     }
     log_test(user_id, log_entry)
 
-def generate_perturbations(uid: str, topic: str, test_ids: list, batch_size: int = 20):
+def generate_perturbations(uid: str, topic: str, test_ids: list, batch_size: int = 10):
     try:
         topic_data = get_tests_by_topic(uid, topic)
         test_lookup = {test["id"]: test for test in topic_data["tests"]}
@@ -101,36 +101,86 @@ def generate_perturbations(uid: str, topic: str, test_ids: list, batch_size: int
             pert_prompts = [f"{criteria['prompt']}: {test['title']}" for test, criteria in batch]
             print(f"Generated {len(pert_prompts)} perturbation prompts")
             
-            # Process perturbations with error handling for individual items
-            perturbed_texts = []
-            for j, prompt in enumerate(pert_prompts):
+            # Use batch processing for perturbations if available
+            if hasattr(pipeline, 'batch_perturb'):
+                print(f"Using batch perturbation for {len(pert_prompts)} items")
                 try:
-                    perturbed_text = pipeline.custom_perturb(prompt)
-                    if perturbed_text is None:
-                        print(f"Perturbation {j+1}/{len(pert_prompts)} failed - skipping")
-                        perturbed_texts.append(None)
-                    else:
+                    perturbed_texts = pipeline.batch_perturb(pert_prompts)
+                    print(f"Batch perturbation completed, got {len(perturbed_texts)} results")
+                except Exception as e:
+                    print(f"Batch perturbation failed: {e}, falling back to individual calls")
+                    # Fallback to individual calls
+                    perturbed_texts = []
+                    for j, prompt in enumerate(pert_prompts):
+                        try:
+                            perturbed_text = pipeline.custom_perturb(prompt)
+                            perturbed_texts.append(perturbed_text)
+                        except Exception as e:
+                            print(f"Error in perturbation {j+1}: {e}")
+                            perturbed_texts.append(None)
+            else:
+                # Fallback for pipelines without batch support
+                print("Pipeline doesn't support batch perturbation, using individual calls")
+                perturbed_texts = []
+                for j, prompt in enumerate(pert_prompts):
+                    try:
+                        perturbed_text = pipeline.custom_perturb(prompt)
                         perturbed_texts.append(perturbed_text)
-                        print(f"Perturbation {j+1}/{len(pert_prompts)} completed")
-                except Exception as e:
-                    print(f"Error in perturbation {j+1}: {e}")
-                    perturbed_texts.append(None)
+                    except Exception as e:
+                        print(f"Error in perturbation {j+1}: {e}")
+                        perturbed_texts.append(None)
             
-            # Process grading with error handling for individual items
-            graded_labels = []
-            for j, perturbed_text in enumerate(perturbed_texts):
-                if perturbed_text is None:
-                    print(f"Skipping grading {j+1}/{len(perturbed_texts)} - no perturbed text")
-                    graded_labels.append("unknown")
-                    continue
-                    
+            # Filter out None values for grading
+            valid_texts = [text for text in perturbed_texts if text is not None]
+            
+            # Use batch processing for grading if available
+            if valid_texts and hasattr(pipeline, 'batch_grade'):
+                print(f"Using batch grading for {len(valid_texts)} valid perturbations")
                 try:
-                    label_result = pipeline.grade(perturbed_text, topic)
-                    graded_labels.append(label_result)
-                    print(f"Grading {j+1}/{len(perturbed_texts)} completed: {label_result}")
+                    batch_grades = pipeline.batch_grade(valid_texts, topic)
+                    print(f"Batch grading completed, got {len(batch_grades)} results")
+                    
+                    # Map batch grades back to the full list (including None values)
+                    graded_labels = []
+                    valid_index = 0
+                    for perturbed_text in perturbed_texts:
+                        if perturbed_text is None:
+                            graded_labels.append("unknown")
+                        else:
+                            if valid_index < len(batch_grades):
+                                graded_labels.append(batch_grades[valid_index])
+                            else:
+                                graded_labels.append("unknown")
+                            valid_index += 1
+                            
                 except Exception as e:
-                    print(f"Error in grading {j+1}: {e}")
-                    graded_labels.append("unknown")
+                    print(f"Batch grading failed: {e}, falling back to individual calls")
+                    # Fallback to individual grading
+                    graded_labels = []
+                    for j, perturbed_text in enumerate(perturbed_texts):
+                        if perturbed_text is None:
+                            graded_labels.append("unknown")
+                        else:
+                            try:
+                                label_result = pipeline.grade(perturbed_text, topic)
+                                graded_labels.append(label_result)
+                            except Exception as e:
+                                print(f"Error in grading {j+1}: {e}")
+                                graded_labels.append("unknown")
+            else:
+                # Fallback for pipelines without batch support or no valid texts
+                print("Using individual grading calls")
+                graded_labels = []
+                for j, perturbed_text in enumerate(perturbed_texts):
+                    if perturbed_text is None:
+                        graded_labels.append("unknown")
+                    else:
+                        try:
+                            label_result = pipeline.grade(perturbed_text, topic)
+                            graded_labels.append(label_result)
+                        except Exception as e:
+                            print(f"Error in grading {j+1}: {e}")
+                            graded_labels.append("unknown")
 
             for (test, criteria), perturbed_text, label_result in zip(batch, perturbed_texts, graded_labels):
                 # Skip failed perturbations

@@ -184,6 +184,173 @@ class GroqPipeline:
         except (KeyError, IndexError) as e:
             print(f"Error parsing Groq API response for perturbation: {e}")
             return None
+
+    def batch_perturb(self, prompts: list) -> list:
+        """
+        Generate multiple perturbations in a single API call for better efficiency
+        Returns list of perturbed texts (or None for failures) in the same order as input prompts
+        """
+        if not self.api_key:
+            raise ValueError("GROQ_API_KEY not found in environment variables")
+        
+        if not prompts:
+            return []
+        
+        # Create a single prompt that processes all perturbations
+        batch_prompt = "Process the following perturbation requests. For each numbered request, apply the specified transformation and return only the transformed text on a new line. Format your response as:\n1. [transformed text 1]\n2. [transformed text 2]\n...\n\nRequests:\n"
+        
+        for i, prompt in enumerate(prompts, 1):
+            batch_prompt += f"{i}. {prompt}\n"
+
+        messages = [
+            {
+                "role": "system",
+                "content": "You are a text perturbation assistant. Process multiple perturbation requests and return only the transformed texts, numbered as requested. Do not provide explanations. Only return the transformed text, and make sure it is different from the original."
+            },
+            {
+                "role": "user",
+                "content": batch_prompt
+            }
+        ]
+
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "max_tokens": min(4000, len(prompts) * 50),  # Estimate tokens needed
+            "temperature": 0.7,
+            "top_p": 0.9,
+        }
+
+        result = self._make_api_call(payload, f"batch perturbation ({len(prompts)} items)")
+        
+        if result is None:
+            print(f"Batch API call failed for {len(prompts)} perturbations")
+            return [None] * len(prompts)
+        
+        try:
+            response_text = result["choices"][0]["message"]["content"].strip()
+            
+            # Parse the numbered responses
+            perturbed_texts = []
+            lines = response_text.split('\n')
+            
+            # Create a mapping of line numbers to responses
+            response_map = {}
+            for line in lines:
+                line = line.strip()
+                if line and line[0].isdigit():
+                    # Extract number and text
+                    parts = line.split('.', 1)
+                    if len(parts) == 2:
+                        try:
+                            num = int(parts[0].strip())
+                            text = parts[1].strip()
+                            response_map[num] = text
+                        except ValueError:
+                            continue
+            
+            # Build results in the correct order
+            for i in range(1, len(prompts) + 1):
+                if i in response_map:
+                    original_text = prompts[i-1].split(": ", 1)[-1] if ": " in prompts[i-1] else prompts[i-1]
+                    perturbed_text = response_map[i]
+                    
+                    if perturbed_text == original_text:
+                        print(f"Warning: Batch perturbation {i} returned same text as original")
+                    else:
+                        print(f"Batch perturbation {i} successful: '{original_text[:30]}...' -> '{perturbed_text[:30]}...'")
+                    
+                    perturbed_texts.append(perturbed_text)
+                else:
+                    print(f"Missing response for batch perturbation {i}")
+                    perturbed_texts.append(None)
+            
+            return perturbed_texts
+            
+        except (KeyError, IndexError) as e:
+            print(f"Error parsing batch perturbation response: {e}")
+            return [None] * len(prompts)
+
+    def batch_grade(self, statements: list, topic: str) -> list:
+        """
+        Grade multiple statements in a single API call for better efficiency
+        Returns list of grades ("acceptable"/"unacceptable"/"unknown") in the same order as input
+        """
+        if not self.api_key:
+            raise ValueError("GROQ_API_KEY not found in environment variables")
+        
+        if not statements:
+            return []
+        
+        # Create a single prompt that processes all gradings
+        batch_prompt = f"Grade the following statements as 'acceptable' or 'unacceptable' for the topic: {topic}\n\nFormat your response as:\n1. acceptable/unacceptable\n2. acceptable/unacceptable\n...\n\nStatements to grade:\n"
+        
+        for i, statement in enumerate(statements, 1):
+            batch_prompt += f"{i}. {statement}\n"
+
+        messages = [
+            {
+                "role": "system",
+                "content": "Grade each statement as 'acceptable' or 'unacceptable'. Return only the grades in numbered format. Do not provide explanations."
+            },
+            {
+                "role": "user",
+                "content": batch_prompt
+            }
+        ]
+
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "max_tokens": min(1000, len(statements) * 10),  # Estimate tokens needed
+            "temperature": 0.6,
+            "top_p": 0.9,
+        }
+
+        result = self._make_api_call(payload, f"batch grading ({len(statements)} items)")
+        
+        if result is None:
+            print(f"Batch grading API call failed for {len(statements)} statements")
+            return ["unknown"] * len(statements)
+        
+        try:
+            response_text = result["choices"][0]["message"]["content"].strip()
+            
+            # Parse the numbered responses
+            grades = []
+            lines = response_text.split('\n')
+            
+            # Create a mapping of line numbers to grades
+            grade_map = {}
+            for line in lines:
+                line = line.strip()
+                if line and line[0].isdigit():
+                    # Extract number and grade
+                    parts = line.split('.', 1)
+                    if len(parts) == 2:
+                        try:
+                            num = int(parts[0].strip())
+                            grade = parts[1].strip().lower()
+                            if grade in ["acceptable", "unacceptable"]:
+                                grade_map[num] = grade
+                        except ValueError:
+                            continue
+            
+            # Build results in the correct order
+            for i in range(1, len(statements) + 1):
+                if i in grade_map:
+                    grade = grade_map[i]
+                    print(f"Batch graded statement {i} as {grade}: '{statements[i-1][:50]}...'")
+                    grades.append(grade)
+                else:
+                    print(f"Missing or invalid grade for statement {i}: '{statements[i-1][:50]}...'")
+                    grades.append("unknown")
+            
+            return grades
+            
+        except (KeyError, IndexError) as e:
+            print(f"Error parsing batch grading response: {e}")
+            return ["unknown"] * len(statements)
     
     def generate(self, existing_statements: list, topic_prompt: str, criteria: str = "base", num_statements: int = 5) -> list:
         """
