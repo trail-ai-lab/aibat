@@ -23,7 +23,7 @@ interface TableActionsToolbarProps {
   isGeneratingPerturbations: boolean
   onGeneratingChange: (isGenerating: boolean) => void
   onPerturbationsGenerated: (perturbations: Map<string, PerturbationResponse[]>) => void
-  onShowCriteriaColumn: () => void
+  onShowCriteriaColumn?: () => void
   isCriteriaEditorOpen: boolean
   onCriteriaEditorOpenChange: (open: boolean) => void
   isAddStatementsOpen: boolean

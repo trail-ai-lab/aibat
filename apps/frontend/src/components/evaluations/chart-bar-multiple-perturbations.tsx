@@ -128,7 +128,10 @@ export function ChartBarPerturbationValidity({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig}>
+        <ChartContainer
+          config={chartConfig}
+          className="aspect-auto h-[400px] w-full"
+        >
           <BarChart data={chartData} layout="vertical" margin={{ left: 40 }}>
             <CartesianGrid vertical={false} />
             <YAxis

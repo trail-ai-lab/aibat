@@ -66,7 +66,12 @@ export function TableCellViewer({ item, onUpdate }: TableCellViewerProps) {
   return (
     <Drawer direction={isMobile ? "bottom" : "right"}>
       <DrawerTrigger asChild>
-        <Button variant="link" className="text-foreground w-fit px-0 text-left">{item.statement}</Button>
+        <Button
+          variant="link"
+          className="text-foreground px-0 text-left h-auto break-words justify-start whitespace-normal"
+        >
+          {item.statement}
+        </Button>
       </DrawerTrigger>
       <DrawerContent>
         <DrawerHeader className="gap-1">

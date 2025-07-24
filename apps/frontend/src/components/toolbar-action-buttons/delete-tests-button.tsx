@@ -26,13 +26,13 @@ export function DeleteTestsButton({
   selectedRowsCount,
   selectedTestIds,
   onDeleteTests,
-  disabled = false
+  disabled = false,
 }: DeleteTestsButtonProps) {
   const [isDeleting, setIsDeleting] = React.useState(false)
 
   const handleDelete = async () => {
     if (selectedTestIds.length === 0) return
-    
+
     setIsDeleting(true)
     try {
       await onDeleteTests(selectedTestIds)
@@ -41,7 +41,8 @@ export function DeleteTestsButton({
     }
   }
 
-  const isDisabled = disabled || selectedRowsCount === 0 || isDeleting
+  // Hide the delete button entirely if no rows are selected or if disabled
+  if (disabled || selectedRowsCount === 0) return null
 
   return (
     <AlertDialog>
@@ -49,28 +50,21 @@ export function DeleteTestsButton({
         <Button
           variant="destructive"
           size="sm"
-          disabled={isDisabled}
-          title={
-            selectedRowsCount === 0
-              ? "Select tests to delete"
-              : `Delete ${selectedRowsCount} selected test${selectedRowsCount === 1 ? '' : 's'}`
-          }
+          disabled={isDeleting}
+          title={`Delete ${selectedRowsCount} selected test${
+            selectedRowsCount === 1 ? "" : "s"
+          }`}
         >
           <IconTrash className="h-4 w-4" />
-          {selectedRowsCount > 0 && (
-            <span className="ml-1">
-              Delete ({selectedRowsCount})
-            </span>
-          )}
-          {selectedRowsCount === 0 && <span className="ml-1">Delete</span>}
+          <span className="ml-1">Delete ({selectedRowsCount})</span>
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Tests</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete {selectedRowsCount} test{selectedRowsCount === 1 ? '' : 's'}? 
-            This action cannot be undone.
+            Are you sure you want to delete {selectedRowsCount} test
+            {selectedRowsCount === 1 ? "" : "s"}? This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
