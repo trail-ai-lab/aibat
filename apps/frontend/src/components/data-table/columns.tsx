@@ -325,7 +325,7 @@ export const createColumns = (
             <Badge
               variant="outline"
               className={`px-1.5 ${
-                isMatch ? "text-green-600" : "text-orange-600"
+                isMatch ? "text-green-600" : "text-red-600"
               }`}
             >
               {isMatch ? (
@@ -357,7 +357,7 @@ export const createColumns = (
           <Badge
             variant="outline"
             className={`px-1.5 ${
-              agreement ? "text-green-600" : "text-orange-600"
+              agreement ? "text-green-600" : "text-red-600"
             }`}
           >
             {agreement ? (
