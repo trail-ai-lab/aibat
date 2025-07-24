@@ -198,6 +198,12 @@ export const createColumns = (
     {
       accessorKey: "ground_truth",
       header: "Your Assessment",
+      sortingFn: (rowA, rowB) => {
+        const order = { ungraded: 0, unacceptable: 1, acceptable: 2 }
+        const a = rowA.original.ground_truth
+        const b = rowB.original.ground_truth
+        return order[a] - order[b]
+      },
       cell: ({ row, table }) => {
         const isChildRow = !!row.original.parent_id
         const assessment = row.original.ground_truth
@@ -227,8 +233,8 @@ export const createColumns = (
           const groundTruth = row.original.ground_truth
           const badgeClass =
             groundTruth === "acceptable"
-              ? "px-1.5 text-green-600 border-green-200"
-              : "px-1.5 text-red-600 border-red-200"
+              ? "px-1.5 text-green-600"
+              : "px-1.5 text-red-600"
           const displayText =
             groundTruth === "acceptable" ? "Acceptable" : "Unacceptable"
 

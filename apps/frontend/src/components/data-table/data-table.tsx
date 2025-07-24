@@ -82,7 +82,9 @@ export function DataTable({
   )
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({})
-  const [sorting, setSorting] = React.useState<SortingState>([])
+  const [sorting, setSorting] = React.useState<SortingState>([
+    { id: "ground_truth", desc: false },
+  ])
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
     pageSize: 10,
@@ -108,20 +110,34 @@ export function DataTable({
     }
   }, [cachedPerturbations])
 
-  const handleStatementUpdate = React.useCallback((updatedItem: z.infer<typeof schema>) => {
-    setData(prevData =>
-      prevData.map(item =>
-        item.id === updatedItem.id ? updatedItem : item
+  const handleStatementUpdate = React.useCallback(
+    (updatedItem: z.infer<typeof schema>) => {
+      setData((prevData) =>
+        prevData.map((item) =>
+          item.id === updatedItem.id ? updatedItem : item
+        )
       )
-    )
-    onStatementUpdate?.(updatedItem)
-  }, [onStatementUpdate])
+      onStatementUpdate?.(updatedItem)
+    },
+    [onStatementUpdate]
+  )
 
   const [showCriteriaColumn, setShowCriteriaColumn] = React.useState(false)
 
   const columns = React.useMemo(
-    () => createColumns(onAssessmentChange, handleStatementUpdate, onDeleteTest, showCriteriaColumn),
-    [onAssessmentChange, handleStatementUpdate, onDeleteTest, showCriteriaColumn]
+    () =>
+      createColumns(
+        onAssessmentChange,
+        handleStatementUpdate,
+        onDeleteTest,
+        showCriteriaColumn
+      ),
+    [
+      onAssessmentChange,
+      handleStatementUpdate,
+      onDeleteTest,
+      showCriteriaColumn,
+    ]
   )
 
   const parentTable = useReactTable({
@@ -153,7 +169,7 @@ export function DataTable({
   // Update criteria column visibility based on current page perturbations
   React.useEffect(() => {
     const currentPageRows = parentTable.getRowModel().rows
-    const hasCurrentPagePerturbations = currentPageRows.some(row =>
+    const hasCurrentPagePerturbations = currentPageRows.some((row) =>
       perturbations.has(row.original.id)
     )
     setShowCriteriaColumn(hasCurrentPagePerturbations)
