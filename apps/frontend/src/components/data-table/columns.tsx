@@ -31,8 +31,10 @@ export const createColumns = (
     assessment: "acceptable" | "unacceptable"
   ) => void,
   onStatementUpdate?: (updatedItem: z.infer<typeof schema>) => void,
-  onDeleteTest?: (testId: string) => void
-): ColumnDef<z.infer<typeof schema>>[] => [
+  onDeleteTest?: (testId: string) => void,
+  showCriteriaColumn: boolean = false
+): ColumnDef<z.infer<typeof schema>>[] => {
+  const baseColumns: ColumnDef<z.infer<typeof schema>>[] = [
   {
     id: "drag",
     header: () => null,
@@ -88,6 +90,57 @@ export const createColumns = (
     },
     enableHiding: false,
   },
+  ...(showCriteriaColumn ? [{
+    accessorKey: "criteria",
+    header: () => <div className="text-center w-full">Criteria</div>,
+    cell: ({ row, table }) => {
+      const isChildRow = !!row.original.parent_id
+      const expandedRows =
+        ((table.options.meta as Record<string, unknown>)
+          ?.expandedRows as Set<string>) || new Set()
+      const isExpanded = expandedRows.has(row.original.id)
+      const toggleExpanded = (table.options.meta as Record<string, unknown>)
+        ?.toggleExpanded as ((id: string) => void) | undefined
+
+      if (isChildRow) {
+        return (
+          <div className="pl-4">
+            <Badge variant="outline" className="text-xs">
+              {row.original.perturbation_type ||
+                row.original.criteria_text ||
+                "Perturbation"}
+            </Badge>
+          </div>
+        )
+      }
+
+      // Only show expand button if this row has perturbations
+      const hasChildRows = (table.options.meta as Record<string, unknown>)
+        ?.perturbations as Map<string, unknown> | undefined
+      const hasChildRowsForThisRow = hasChildRows?.has(row.original.id) || false
+
+      if (!hasChildRowsForThisRow) {
+        return null
+      }
+
+      return (
+        <div className="flex justify-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0"
+            onClick={() => toggleExpanded?.(row.original.id)}
+          >
+            {isExpanded ? (
+              <IconChevronUp className="h-4 w-4" />
+            ) : (
+              <IconChevronDown className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      )
+    },
+  }] : []),
   {
     accessorKey: "ai_assessment",
     header: "AI Assessment",
@@ -301,57 +354,6 @@ export const createColumns = (
     },
   },
   {
-    accessorKey: "criteria",
-    header: () => <div className="text-center w-full">Criteria</div>,
-    cell: ({ row, table }) => {
-      const isChildRow = !!row.original.parent_id
-      const expandedRows =
-        ((table.options.meta as Record<string, unknown>)
-          ?.expandedRows as Set<string>) || new Set()
-      const isExpanded = expandedRows.has(row.original.id)
-      const toggleExpanded = (table.options.meta as Record<string, unknown>)
-        ?.toggleExpanded as ((id: string) => void) | undefined
-
-      if (isChildRow) {
-        return (
-          <div className="pl-4">
-            <Badge variant="outline" className="text-xs">
-              {row.original.perturbation_type ||
-                row.original.criteria_text ||
-                "Perturbation"}
-            </Badge>
-          </div>
-        )
-      }
-
-      // Only show expand button if this row has perturbations
-      const hasChildRows = (table.options.meta as Record<string, unknown>)
-        ?.perturbations as Map<string, unknown> | undefined
-      const hasChildRowsForThisRow = hasChildRows?.has(row.original.id) || false
-
-      if (!hasChildRowsForThisRow) {
-        return null
-      }
-
-      return (
-        <div className="flex justify-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0"
-            onClick={() => toggleExpanded?.(row.original.id)}
-          >
-            {isExpanded ? (
-              <IconChevronUp className="h-4 w-4" />
-            ) : (
-              <IconChevronDown className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-      )
-    },
-  },
-  {
     id: "actions",
     cell: ({ row }) => {
       const isChildRow = !!row.original.parent_id
@@ -388,4 +390,7 @@ export const createColumns = (
       )
     },
   },
-]
+  ]
+
+  return baseColumns
+}

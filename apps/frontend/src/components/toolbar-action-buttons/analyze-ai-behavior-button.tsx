@@ -16,7 +16,7 @@ interface AnalyzeAIBehaviorButtonProps {
   isGeneratingPerturbations: boolean
   onGeneratingChange: (isGenerating: boolean) => void
   onPerturbationsGenerated: (perturbations: Map<string, PerturbationResponse[]>) => void
-  onShowCriteriaColumn: () => void
+  onShowCriteriaColumn?: () => void
 }
 
 export function AnalyzeAIBehaviorButton({
@@ -73,8 +73,8 @@ export function AnalyzeAIBehaviorButton({
       console.log("Perturbation map:", perturbationMap)
       onPerturbationsGenerated(perturbationMap)
       
-      // Show the criteria column now that we have perturbations
-      onShowCriteriaColumn()
+      // Show the criteria column now that we have perturbations (if callback provided)
+      onShowCriteriaColumn?.()
       
       toast.success(`Generated ${result.perturbations.length} perturbations for ${selectedRowsCount} test statements`)
     } catch (error) {
