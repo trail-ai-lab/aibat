@@ -4,7 +4,8 @@
 
 import * as React from "react"
 import { useState } from "react"
-import { IconSettings, IconHelp, IconInnerShadowTop } from "@tabler/icons-react"
+import { IconSettings, IconHelp } from "@tabler/icons-react"
+import Image from "next/image"
 
 import { NavTopics } from "@/components/sidebar-nav/nav-topics"
 import { NavMain } from "@/components/sidebar-nav/nav-main"
@@ -70,7 +71,14 @@ export function AppSidebar({
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
               <a href="#">
-                <IconInnerShadowTop className="!size-5" />
+                <Image
+                  src="/logo/trail-logo.svg"
+                  alt="TRAIL Logo"
+                  width={24}
+                  height={24}
+                  priority
+                  className="invert-0 dark:invert"
+                />
                 <span className="text-base font-semibold">AIBAT</span>
               </a>
             </SidebarMenuButton>
